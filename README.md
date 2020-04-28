@@ -9,7 +9,10 @@ https://josm.openstreetmap.de/wiki/DevelopersGuide/DevelopingPlugins
 
 ## Tools for indoor map visualization or editing
 OsmInEdit - editor for indoor maps - https://osminedit.pavie.info/#19/48.13688/-1.69521/0
+
 OpenLevelUp - 2d indoor map viewer - https://openlevelup.net/?l=0#19/53.55290/10.00693
+
+JOSM Indoorhelper - Plugin to ease indoor mapping in JOSM - https://wiki.openstreetmap.org/wiki/JOSM/Plugins/indoorhelper
 
 ## Existing indoor tagging formats
 
