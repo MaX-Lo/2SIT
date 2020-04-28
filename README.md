@@ -7,8 +7,11 @@ https://wiki.openstreetmap.org/wiki/Indoor_Mapping
 *JOSM Plugin Dev*: 
 https://josm.openstreetmap.de/wiki/DevelopersGuide/DevelopingPlugins
 
-## Tools for indoor map visualization
-...
+## Tools for indoor map visualization or editing
+OsmInEdit - editor for indoor maps
+
+https://osminedit.pavie.info/#19/48.13688/-1.69521/0
+
 
 ## Existing indoor tagging formats
 
