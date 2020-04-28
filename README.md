@@ -21,6 +21,12 @@ https://wiki.openstreetmap.org/wiki/Simple_Indoor_Tagging
 
 Example: https://www.openstreetmap.org/edit#map=19/48.13956/11.56087
 
+Example (library with doors):
+
+https://www.openstreetmap.org/edit#map=20/42.80047/-1.63640
+
+https://openlevelup.net/?l=0#20/42.80052/-1.63628
+
 *IndoorOSM (deprecated)*: 
 https://wiki.openstreetmap.org/wiki/Proposed_features/IndoorOSM
 
