@@ -36,11 +36,7 @@ Example: https://www.openstreetmap.org/edit#map=20/49.41866/8.67497
 https://github.com/mocnik-science/osm-python-tools
 
 
-## Project Approaches
-...
-*JOSM plugin*
-transforming the map but requiring direct feedback from the user in a WYSIWYG style to reduce risks of transformation errors
-
+# Project Approaches
 ## 1) Data aquisition
 - download area via OverpassApi or import downloaded area from JOSM (via coordinates, name or address)
 - consider downloading only indoor relevant data
