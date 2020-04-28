@@ -19,9 +19,12 @@ JOSM Indoorhelper - Plugin to ease indoor mapping in JOSM - https://wiki.openstr
 *SIT*: 
 https://wiki.openstreetmap.org/wiki/Simple_Indoor_Tagging
 
+Example: https://www.openstreetmap.org/edit#map=19/48.13956/11.56087
+
 *IndoorOSM (deprecated)*: 
 https://wiki.openstreetmap.org/wiki/Proposed_features/IndoorOSM
 
+Example: https://www.openstreetmap.org/edit#map=20/49.41866/8.67497
 
 ## Buildings with indoor maps
 ...
