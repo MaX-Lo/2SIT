@@ -41,5 +41,18 @@ Example: https://www.openstreetmap.org/edit#map=20/49.41866/8.67497
 *JOSM plugin*
 transforming the map but requiring direct feedback from the user in a WYSIWYG style to reduce risks of transformation errors
 
+## 1) Data aquisition
+- download area via OverpassApi or import downloaded area from JOSM (via coordinates, name or address)
+- consider downloading only indoor relevant data
+- multiple buldings at once - list inputs
 
+## 2) Transformation into SIT conform data
+- identify used indoor mapping convention
+- continue based on result
+- beginn with parsing features on one level
+- if this is working start parsing connections between different levels
 
+## 3) Evaluation and contribution
+- save changeset in a format that can be understood by OSM
+- import changeset into JOSM (cli? How does JOSM store changesets?)
+- compare with old version and test for SIT conformity
