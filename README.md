@@ -40,6 +40,8 @@ Osmosis:
 - [plugins](https://wiki.openstreetmap.org/wiki/Osmosis/Writing_Plugins)
 - [maven](https://mvnrepository.com/artifact/org.openstreetmap.osmosis)
 
+- [OSM API Client lib](https://github.com/westnordost/osmapi/)
+
 # Project Approaches
 ## 1) Data aquisition
 - download area via OverpassApi or import downloaded area from JOSM (via coordinates, name or address)
