@@ -24,6 +24,8 @@ Example (library with doors):
 
 [OpenLevelUp](https://openlevelup.net/?l=0#20/42.80052/-1.63628)
 
+[AllDeprecated](https://wiki.openstreetmap.org/wiki/Indoor_Mapping#Previous_tagging_proposals)
+
 [IndoorOSM (deprecated)](https://wiki.openstreetmap.org/wiki/Proposed_features/IndoorOSM)
 
 [Example](https://www.openstreetmap.org/edit#map=20/49.41866/8.67497)
