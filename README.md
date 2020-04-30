@@ -33,7 +33,14 @@ https://wiki.openstreetmap.org/wiki/Proposed_features/IndoorOSM
 Example: https://www.openstreetmap.org/edit#map=20/49.41866/8.67497
 
 ## API's
+### python
 https://github.com/mocnik-science/osm-python-tools
+
+### java
+Osmosis:
+- (wiki)[https://wiki.openstreetmap.org/wiki/Osmosis]
+- (plugins)[https://wiki.openstreetmap.org/wiki/Osmosis/Writing_Plugins]
+- (maven)[https://mvnrepository.com/artifact/org.openstreetmap.osmosis]
 
 
 # Project Approaches
