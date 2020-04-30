@@ -59,3 +59,11 @@ Osmosis:
 - save changeset in a format that can be understood by OSM
 - import changeset into JOSM (cli? How does JOSM store changesets?)
 - compare with old version and test for SIT conformity
+
+## Output
+Distirbution class that can either commit changeset to a server or save it as xml
+
+# Production envirenment
+Install local osm server ([maybe this](https://github.com/openstreetmap/openstreetmap-website/blob/master/INSTALL.md))
+
+Let Distribution class commit changes to this server and JOSM pull from this server
