@@ -25,3 +25,9 @@ develop a general idea how a transformation could look like
 JOSM plugin → transforming the map but requiring direct feedback from the user in a WYSIWYG style to reduce risks of transformation errors
 other tools
 research tools offering a nice view for indoor maps
+
+### 3D maps
+
+- (gare du nord)[https://openstationmap.org/#18/48.88034/2.35520]
+- (gare du lion)[https://openstationmap.org/#18/48.843893/2.374512]
+- (gare de la part dieu)[https://openstationmap.org/#18/45.760686/4.860043/8.8/55]
