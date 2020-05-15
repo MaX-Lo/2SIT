@@ -1,7 +1,24 @@
 package de.twoSIT.models
 
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
+
+class member {
+    @JacksonXmlProperty(isAttribute = true)
+    var type: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var ref: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var role: String = "not available"
+}
+
+class nd {
+    @JacksonXmlProperty(isAttribute = true)
+    var ref: String = "not available"
+}
 
 class tag {
     @JacksonXmlProperty(isAttribute = true)
@@ -32,10 +49,21 @@ abstract class abstract_node {
 
     @JacksonXmlProperty(isAttribute = true)
     var uid: String = "not available"
+
+    @JacksonXmlProperty(localName = "tag")
+    var tags: List<tag> = mutableListOf()
 }
 
-class way : abstract_node() {
 
+class relation : abstract_node() {
+    @JacksonXmlProperty(localName = "member")
+    var members: List<member> = mutableListOf()
+}
+
+
+class way : abstract_node() {
+    @JacksonXmlProperty(localName = "nd")
+    var nds: List<nd> = mutableListOf()
 }
 
 class node : abstract_node() {
@@ -44,9 +72,6 @@ class node : abstract_node() {
 
     @JacksonXmlProperty(isAttribute = true)
     var lon: Float = 0f
-
-    @JacksonXmlProperty(localName = "tag")
-    var tags: List<tag> = mutableListOf()
 }
 
 class bounds {
@@ -84,6 +109,16 @@ class RawResponse {
     @JacksonXmlProperty(localName = "bounds")
     var bounds: bounds = bounds()
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "node")
-    var nodes: List<abstract_node> = mutableListOf()
+    var nodes: List<node> = mutableListOf()
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "way")
+    var ways: List<way> = mutableListOf()
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "relation")
+    var relations: List<relation> = mutableListOf()
+
 }
