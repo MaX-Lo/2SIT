@@ -3,10 +3,13 @@ package de.twoSIT
 import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import de.twoSIT.models.RawResponse
+import de.twoSIT.models.Response
 import org.apache.http.client.fluent.Request
 
 
 fun getResponse(): String {
+    // todo log and time the shit
+    // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
     val latUL = 11.54
     val lonUL = 48.14
     val latLR = 11.543
@@ -17,17 +20,18 @@ fun getResponse(): String {
     return Request.Get(url).execute().returnContent().asString()
 }
 
-fun parseXml(raw: String) {
+fun parseXml(raw: String): Response {
+    // todo add some fault tolerance here too
     val module = JacksonXmlModule()
     module.setDefaultUseWrapper(false)
     val xmlMapper = XmlMapper(module)
 
     val rawObj = xmlMapper.readValue(raw, RawResponse::class.java)
-    val cleanedObj = ""
+    return Response(rawObj)
 }
 
 fun main() {
-    val raw_xml_string = getResponse()
-    parseXml(raw_xml_string)
+    val rawXmlString = getResponse()
+    val response = parseXml(rawXmlString)
 
 }

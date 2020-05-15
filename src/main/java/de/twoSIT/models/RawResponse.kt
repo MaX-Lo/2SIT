@@ -28,7 +28,7 @@ class tag {
     var v: String = "not available"
 }
 
-abstract class abstract_node {
+abstract class abstractNode {
     @JacksonXmlProperty(isAttribute = true)
     var id: String = "not available"
 
@@ -51,22 +51,22 @@ abstract class abstract_node {
     var uid: String = "not available"
 
     @JacksonXmlProperty(localName = "tag")
-    var tags: List<tag> = mutableListOf()
+    var tags: MutableList<tag> = mutableListOf()
 }
 
 
-class relation : abstract_node() {
+class relation : abstractNode() {
     @JacksonXmlProperty(localName = "member")
-    var members: List<member> = mutableListOf()
+    var members: MutableList<member> = mutableListOf()
 }
 
 
-class way : abstract_node() {
+class way : abstractNode() {
     @JacksonXmlProperty(localName = "nd")
-    var nds: List<nd> = mutableListOf()
+    var nds: MutableList<nd> = mutableListOf()
 }
 
-class node : abstract_node() {
+class node : abstractNode() {
     @JacksonXmlProperty(isAttribute = true)
     var lat: Float = 0f
 
@@ -88,7 +88,6 @@ class bounds {
     var maxlon: Float = 0f
 }
 
-// raw response
 @JacksonXmlRootElement(localName = "osm")
 class RawResponse {
     @JacksonXmlProperty(isAttribute = true)
@@ -111,14 +110,13 @@ class RawResponse {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "node")
-    var nodes: List<node> = mutableListOf()
+    var nodes: MutableList<node> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "way")
-    var ways: List<way> = mutableListOf()
+    var ways: MutableList<way> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
-    var relations: List<relation> = mutableListOf()
-
+    var relations: MutableList<relation> = mutableListOf()
 }
