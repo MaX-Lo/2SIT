@@ -13,12 +13,12 @@ const val DEBUG = true
 fun getResponse(): String {
     // todo log and time the shit
     // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
-    val minLatitude = 42.79609 //11.54
-    val minLongitude = -1.63938 //48.14
-    val maxLatitude = 42.80234 //11.543
-    val maxLongitude = -1.63280 //48.145
-    assert(minLatitude < maxLatitude)
+    val minLongitude = -1.63938 //11.54
+    val minLatitude =  42.79609//48.14
+    val maxLongitude = -1.62280 //11.543
+    val maxLatitude = 42.80234 //48.145
     assert(minLongitude < maxLongitude)
+    assert(minLatitude < maxLatitude)
 
     val dirName = "responses"
     File(dirName).mkdir()
@@ -55,5 +55,4 @@ fun parseXml(raw: String): Response {
 fun main() {
     val rawXmlString = getResponse()
     val response = parseXml(rawXmlString)
-
 }

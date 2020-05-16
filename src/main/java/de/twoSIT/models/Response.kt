@@ -1,15 +1,21 @@
 package de.twoSIT.models
 
 class Response(rawResponse: RawResponse) {
-    var relations: MutableList<relation> = mutableListOf()
-    var ways: MutableList<way> = mutableListOf()
-    var nodes: MutableList<node> = mutableListOf()
+    var relations: MutableMap<String, Relation> = mutableMapOf()
+    var ways: MutableMap<String, Way> = mutableMapOf()
+    var nodes: MutableMap<String, Node> = mutableMapOf()
 
     init {
-        for (relation in rawResponse.relations){
+        parseRelations(rawResponse.relations)
+        parseWays(rawResponse.ways)
+        parseNodes(rawResponse.nodes)
+    }
+
+    fun parseRelations(rawRelations: MutableList<Relation>) {
+        for (relation in rawRelations){
+            var id = ""
             for (tag in relation.tags){
                 if (tag.k == "type" && tag.v == "building"){
-                    relations.add(relation)
                     for (member in relation.members){
                         when (member.type) {
                             "way" -> {
@@ -25,11 +31,36 @@ class Response(rawResponse: RawResponse) {
                         }
                     }
                     break
+                } else if (tag.k == "id") {
+                    id = tag.v
                 }
             }
+            relations[id] = relation
         }
+    }
 
-        ways = rawResponse.ways
-        nodes = rawResponse.nodes
+    fun parseWays(rawWays: MutableList<Way>) {
+        for (way in rawWays) {
+            var id = ""
+            for (tag in way.tags) {
+                if (tag.k == "id") {
+                    id = tag.v
+                }
+
+            }
+            ways[id] = way
+        }
+    }
+
+    fun parseNodes(rawNodes: MutableList<Node>) {
+        for (node in rawNodes) {
+            var id = ""
+            for (tag in node.tags) {
+                if (tag.k == "id") {
+                    id = tag.v
+                }
+            }
+            nodes[id] = node
+        }
     }
 }

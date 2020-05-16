@@ -4,7 +4,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 
-class member {
+class Member {
     @JacksonXmlProperty(isAttribute = true)
     var type: String = "not available"
 
@@ -15,12 +15,12 @@ class member {
     var role: String = "not available"
 }
 
-class nd {
+class NodeReference {
     @JacksonXmlProperty(isAttribute = true)
     var ref: String = "not available"
 }
 
-class tag {
+class Tag {
     @JacksonXmlProperty(isAttribute = true)
     var k: String = "not available"
 
@@ -28,7 +28,7 @@ class tag {
     var v: String = "not available"
 }
 
-abstract class abstractNode {
+abstract class AbstractNode {
     @JacksonXmlProperty(isAttribute = true)
     var id: String = "not available"
 
@@ -51,22 +51,22 @@ abstract class abstractNode {
     var uid: String = "not available"
 
     @JacksonXmlProperty(localName = "tag")
-    var tags: MutableList<tag> = mutableListOf()
+    var tags: MutableList<Tag> = mutableListOf()
 }
 
 
-class relation : abstractNode() {
+class Relation : AbstractNode() {
     @JacksonXmlProperty(localName = "member")
-    var members: MutableList<member> = mutableListOf()
+    var members: MutableList<Member> = mutableListOf()
 }
 
 
-class way : abstractNode() {
+class Way : AbstractNode() {
     @JacksonXmlProperty(localName = "nd")
-    var nds: MutableList<nd> = mutableListOf()
+    var nds: MutableList<NodeReference> = mutableListOf()
 }
 
-class node : abstractNode() {
+class Node : AbstractNode() {
     @JacksonXmlProperty(isAttribute = true)
     var lat: Float = 0f
 
@@ -74,7 +74,7 @@ class node : abstractNode() {
     var lon: Float = 0f
 }
 
-class bounds {
+class BoundingBox {
     @JacksonXmlProperty(isAttribute = true)
     var minlat: Float = 0f
 
@@ -106,17 +106,17 @@ class RawResponse {
     var license: String = "not available"
 
     @JacksonXmlProperty(localName = "bounds")
-    var bounds: bounds = bounds()
+    var bounds: BoundingBox = BoundingBox()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "node")
-    var nodes: MutableList<node> = mutableListOf()
+    var nodes: MutableList<Node> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "way")
-    var ways: MutableList<way> = mutableListOf()
+    var ways: MutableList<Way> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
-    var relations: MutableList<relation> = mutableListOf()
+    var relations: MutableList<Relation> = mutableListOf()
 }
