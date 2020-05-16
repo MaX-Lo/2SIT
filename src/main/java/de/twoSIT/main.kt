@@ -9,6 +9,7 @@ import java.io.File
 
 
 const val DEBUG = true
+val cached = File("response.xml")
 
 fun getResponse(): String {
     // todo log and time the shit
@@ -20,11 +21,11 @@ fun getResponse(): String {
     assert(minLatitude < maxLatitude)
     assert(minLongitude < maxLongitude)
 
-    if (!DEBUG) {
-        val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$minLatitude,$minLongitude,$maxLatitude,$maxLongitude"
-        return Request.Get(url).execute().returnContent().asString()
+    if (DEBUG && cached.exists()) {
+        return cached.readText()
     }
-    return File("response.xml").readText()
+    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$minLatitude,$minLongitude,$maxLatitude,$maxLongitude"
+    return Request.Get(url).execute().returnContent().asString()
 }
 
 fun parseXml(raw: String): Response {
@@ -39,7 +40,7 @@ fun parseXml(raw: String): Response {
 
 fun main() {
     val rawXmlString = getResponse()
-    if (!DEBUG){
+    if (DEBUG && !cached.exists()){
         File("response.xml").printWriter().use { out ->
             val lines = rawXmlString.split("\n")
             for (line in lines){
