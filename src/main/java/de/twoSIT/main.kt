@@ -5,7 +5,10 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import de.twoSIT.models.RawResponse
 import de.twoSIT.models.Response
 import org.apache.http.client.fluent.Request
+import java.io.File
 
+
+const val DEBUG = true
 
 fun getResponse(): String {
     // todo log and time the shit
@@ -15,9 +18,11 @@ fun getResponse(): String {
     val latLR = 11.543
     val lonLR = 48.145
 
-    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$latUL,$lonUL,$latLR,$lonLR"
-
-    return Request.Get(url).execute().returnContent().asString()
+    if (!DEBUG) {
+        val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$latUL,$lonUL,$latLR,$lonLR"
+        return Request.Get(url).execute().returnContent().asString()
+    }
+    return File("response.xml").readText()
 }
 
 fun parseXml(raw: String): Response {
@@ -32,6 +37,14 @@ fun parseXml(raw: String): Response {
 
 fun main() {
     val rawXmlString = getResponse()
+    if (!DEBUG){
+        File("response.xml").printWriter().use { out ->
+            val lines = rawXmlString.split("\n")
+            for (line in lines){
+                out.println(line)
+            }
+        }
+    }
     val response = parseXml(rawXmlString)
 
 }
