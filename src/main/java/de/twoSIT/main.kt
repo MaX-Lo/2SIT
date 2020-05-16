@@ -13,13 +13,15 @@ const val DEBUG = true
 fun getResponse(): String {
     // todo log and time the shit
     // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
-    val latUL = 11.54
-    val lonUL = 48.14
-    val latLR = 11.543
-    val lonLR = 48.145
+    val minLatitude = 42.79609 //11.54
+    val minLongitude = -1.63938 //48.14
+    val maxLatitude = 42.80234 //11.543
+    val maxLongitude = -1.63280 //48.145
+    assert(minLatitude < maxLatitude)
+    assert(minLongitude < maxLongitude)
 
     if (!DEBUG) {
-        val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$latUL,$lonUL,$latLR,$lonLR"
+        val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$minLatitude,$minLongitude,$maxLatitude,$maxLongitude"
         return Request.Get(url).execute().returnContent().asString()
     }
     return File("response.xml").readText()
