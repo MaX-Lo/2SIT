@@ -55,13 +55,13 @@ abstract class AbstractNode {
 }
 
 
-class Relation : AbstractNode() {
+class RawRelation : AbstractNode() {
     @JacksonXmlProperty(localName = "member")
     var members: MutableList<Member> = mutableListOf()
 }
 
 
-class Way : AbstractNode() {
+class RawWay : AbstractNode() {
     @JacksonXmlProperty(localName = "nd")
     var nds: MutableList<NodeReference> = mutableListOf()
 }
@@ -114,9 +114,9 @@ class RawResponse {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "way")
-    var ways: MutableList<Way> = mutableListOf()
+    var ways: MutableList<RawWay> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
-    var relations: MutableList<Relation> = mutableListOf()
+    var relations: MutableList<RawRelation> = mutableListOf()
 }

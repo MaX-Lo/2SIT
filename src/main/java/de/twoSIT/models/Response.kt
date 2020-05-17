@@ -1,66 +1,80 @@
 package de.twoSIT.models
 
+class Way : AbstractNode() {
+    val nodes = mutableMapOf<String, Node>()
+}
+
+class Relation : AbstractNode(){
+    val relationReferences = mutableListOf<String>()
+    val ways = mutableMapOf<String, Way>()
+}
+
 class Response(rawResponse: RawResponse) {
     var relations: MutableMap<String, Relation> = mutableMapOf()
-    var ways: MutableMap<String, Way> = mutableMapOf()
-    var nodes: MutableMap<String, Node> = mutableMapOf()
+    private var allWays: MutableMap<String, Way> = mutableMapOf()
+    private var allNodes: MutableMap<String, Node> = mutableMapOf()
 
     init {
-        parseRelations(rawResponse.relations)
-        parseWays(rawResponse.ways)
         parseNodes(rawResponse.nodes)
+        parseWays(rawResponse.ways)
+        parseRelations(rawResponse.relations)
+        // now in relations [Relation] there should only be necessary relations, that composite only corresponding and
+        // therefore necessary ways [Way], that again composite only corresponding and therefore necessary nodes [Node].
+        // allWays and allNodes are not necessary anymore
     }
 
-    fun parseRelations(rawRelations: MutableList<Relation>) {
+    private fun parseRelations(rawRelations: MutableList<RawRelation>) {
         for (relation in rawRelations){
-            var id = ""
+            val cleanRelation = Relation()
+            cleanRelation.id = relation.id
+            cleanRelation.visible = relation.visible
+            cleanRelation.version = relation.version
+            cleanRelation.changeset = relation.changeset
+            cleanRelation.timestamp = relation.timestamp
+            cleanRelation.user = relation.user
+            cleanRelation.uid = relation.uid
+            cleanRelation.tags = relation.tags
+
             for (tag in relation.tags){
                 if (tag.k == "type" && tag.v == "building"){
                     for (member in relation.members){
                         when (member.type) {
-                            "way" -> {
-                                // todo get way from ref and add it to this.ways
-                            }
-                            "relation" -> {
-                                // todo get relation from ref, check if it is already in this.relations and, if not,
-                                //  add it to this.ways
-                            }
+                            "way" -> cleanRelation.ways[member.ref] = allWays[member.ref]!!
+                            "relation" -> cleanRelation.relationReferences.add(member.ref)
                             else -> {
                                 // log it
                             }
                         }
                     }
+                    relations[relation.id] = cleanRelation
                     break
-                } else if (tag.k == "id") {
-                    id = tag.v
                 }
             }
-            relations[id] = relation
         }
     }
 
-    fun parseWays(rawWays: MutableList<Way>) {
+    private fun parseWays(rawWays: MutableList<RawWay>) {
         for (way in rawWays) {
-            var id = ""
-            for (tag in way.tags) {
-                if (tag.k == "id") {
-                    id = tag.v
-                }
-
+            val cleanWay = Way()
+            cleanWay.id = way.id
+            cleanWay.visible = way.visible
+            cleanWay.version = way.version
+            cleanWay.changeset = way.changeset
+            cleanWay.timestamp = way.timestamp
+            cleanWay.user = way.user
+            cleanWay.uid = way.uid
+            cleanWay.tags = way.tags
+            for (nodeRef in way.nds){
+                cleanWay.nodes[nodeRef.ref] = allNodes[nodeRef.ref]!!
             }
-            ways[id] = way
+
+            allWays[cleanWay.id] = cleanWay
         }
     }
 
-    fun parseNodes(rawNodes: MutableList<Node>) {
+    private fun parseNodes(rawNodes: MutableList<Node>) {
         for (node in rawNodes) {
-            var id = ""
-            for (tag in node.tags) {
-                if (tag.k == "id") {
-                    id = tag.v
-                }
-            }
-            nodes[id] = node
+            allNodes[node.id] = node
         }
     }
 }
