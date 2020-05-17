@@ -11,20 +11,18 @@ class Relation : AbstractNode(){
 
 class Response(rawResponse: RawResponse) {
     var relations: MutableMap<String, Relation> = mutableMapOf()
-    private var allWays: MutableMap<String, Way> = mutableMapOf()
-    private var allNodes: MutableMap<String, Node> = mutableMapOf()
+    var ways: MutableMap<String, Way> = mutableMapOf()
+    var nodes: MutableMap<String, Node> = mutableMapOf()
 
     init {
-        parseNodes(rawResponse.nodes)
-        parseWays(rawResponse.ways)
-        parseRelations(rawResponse.relations)
+        parseRelations(rawResponse)
         // now in relations [Relation] there should only be necessary relations, that composite only corresponding and
         // therefore necessary ways [Way], that again composite only corresponding and therefore necessary nodes [Node].
-        // allWays and allNodes are not necessary anymore
     }
 
-    private fun parseRelations(rawRelations: MutableList<RawRelation>) {
-        for (relation in rawRelations){
+    private fun parseRelations(rawResponse: RawResponse) {
+        val allWays = parseWays(rawResponse)
+        for (relation in rawResponse.relations){
             val cleanRelation = Relation()
             cleanRelation.id = relation.id
             cleanRelation.visible = relation.visible
@@ -39,7 +37,14 @@ class Response(rawResponse: RawResponse) {
                 if (tag.k == "type" && tag.v == "building"){
                     for (member in relation.members){
                         when (member.type) {
-                            "way" -> cleanRelation.ways[member.ref] = allWays[member.ref]!!
+                            "way" -> {
+                                val way = allWays[member.ref]!!
+                                cleanRelation.ways[way.id] = way
+                                ways[way.id] = way
+                                for (node in way.nodes.values){
+                                    nodes[node.id] = node
+                                }
+                            }
                             "relation" -> cleanRelation.relationReferences.add(member.ref)
                             else -> {
                                 // log it
@@ -53,8 +58,10 @@ class Response(rawResponse: RawResponse) {
         }
     }
 
-    private fun parseWays(rawWays: MutableList<RawWay>) {
-        for (way in rawWays) {
+    private fun parseWays(rawResponse: RawResponse): MutableMap<String, Way> {
+        val allWays: MutableMap<String, Way> = mutableMapOf()
+        val allNodes = parseNodes(rawResponse.nodes)
+        for (way in rawResponse.ways) {
             val cleanWay = Way()
             cleanWay.id = way.id
             cleanWay.visible = way.visible
@@ -67,14 +74,16 @@ class Response(rawResponse: RawResponse) {
             for (nodeRef in way.nds){
                 cleanWay.nodes[nodeRef.ref] = allNodes[nodeRef.ref]!!
             }
-
             allWays[cleanWay.id] = cleanWay
         }
+        return allWays
     }
 
-    private fun parseNodes(rawNodes: MutableList<Node>) {
+    private fun parseNodes(rawNodes: MutableList<Node>): MutableMap<String, Node> {
+        val allNodes = mutableMapOf<String, Node>()
         for (node in rawNodes) {
             allNodes[node.id] = node
         }
+        return allNodes
     }
 }
