@@ -2,6 +2,25 @@ package de.twoSIT.models
 
 class Way : AbstractNode() {
     val nodes = mutableMapOf<String, Node>()
+
+    fun toRaw(): RawWay{
+        val rawWay = RawWay()
+        rawWay.id = id
+        rawWay.visible = visible
+        rawWay.tags = tags
+        rawWay.user = user
+        rawWay.uid = uid
+        rawWay.timestamp = timestamp
+        rawWay.changeset = changeset
+        rawWay.version = version
+        rawWay.nds = mutableListOf()
+        for (nodeId in nodes.keys){
+            val nr = NodeReference()
+            nr.ref = nodeId
+            rawWay.nds.add(nr)
+        }
+        return rawWay
+    }
 }
 
 class Relation : AbstractNode(){

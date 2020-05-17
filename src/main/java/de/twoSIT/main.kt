@@ -2,6 +2,7 @@ package de.twoSIT
 
 import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import de.twoSIT.models.Area
 import de.twoSIT.models.RawResponse
 import de.twoSIT.models.Response
 import org.apache.http.client.fluent.Request
@@ -10,25 +11,24 @@ import java.io.File
 
 const val DEBUG = true
 
-fun getResponse(): String {
+val indoorArea = Area(49.41689, 8.67180, 49.41969, 8.67695)
+val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
+
+fun getResponse(area: Area): String {
     // todo log and time the shit
     // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
-    val minLongitude = 49.41689 //11.54
-    val minLatitude =  8.67180//48.14
-    val maxLongitude = 49.41969 //11.543
-    val maxLatitude = 8.67695 //48.145
-    assert(minLongitude < maxLongitude)
-    assert(minLatitude < maxLatitude)
 
     val dirName = "responses"
     File(dirName).mkdir()
-    val cached = File("$dirName/response_${minLatitude}_${minLongitude}_${maxLatitude}_${maxLongitude}.xml")
+    val cached = File("$dirName/response_${area.minLatitude}_${area.minLongitude}_${area.maxLatitude}_" +
+            "${area.maxLongitude}.xml")
 
     if (DEBUG && cached.exists()) {
         return cached.readText()
     }
 
-    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=$minLatitude,$minLongitude,$maxLatitude,$maxLongitude"
+    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=${area.minLatitude},${area.minLongitude}," +
+            "${area.maxLatitude},${area.maxLongitude}"
     val rawXml = Request.Get(url).execute().returnContent().asString()
 
     if (DEBUG){
@@ -53,7 +53,7 @@ fun parseXml(raw: String): Response {
 }
 
 fun main() {
-    val rawXmlString = getResponse()
+    val rawXmlString = getResponse(sitArea)
     val response = parseXml(rawXmlString)
     val x = ""
 }
