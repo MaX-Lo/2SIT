@@ -159,8 +159,14 @@ class Mapper(rawResponse: RawResponse) {
                         "corridor" -> room.indoorTag = IndoorTag.CORRIDOR
                         "room" -> room.indoorTag = IndoorTag.ROOM
                         "hall" -> room.indoorTag = IndoorTag.AREA
-                        "verticalpassage" -> parseLevelConnections(way)
-                        "shell" -> currentBuilding.outline = way
+                        "verticalpassage" -> {
+                            parseLevelConnections(way)
+                            return
+                        }
+                        "shell" -> {
+                            currentBuilding.outline = way
+                            return
+                        }
                         else -> println("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
                     }
                 }
