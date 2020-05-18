@@ -3,8 +3,8 @@ package de.twoSIT
 import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import de.twoSIT.models.Area
+import de.twoSIT.models.Building
 import de.twoSIT.models.RawResponse
-import de.twoSIT.models.Response
 import org.apache.http.client.fluent.Request
 import java.io.File
 
@@ -42,18 +42,21 @@ fun getResponse(area: Area): String {
     return rawXml
 }
 
-fun parseXml(raw: String): Response {
+fun parse2Xml(raw: String): RawResponse {
     // todo add some fault tolerance here too
     val module = JacksonXmlModule()
     module.setDefaultUseWrapper(false)
     val xmlMapper = XmlMapper(module)
 
-    val rawObj = xmlMapper.readValue(raw, RawResponse::class.java)
-    return Response(rawObj)
+    return xmlMapper.readValue(raw, RawResponse::class.java)
 }
 
 fun main() {
-    val rawXmlString = getResponse(sitArea)
-    val response = parseXml(rawXmlString)
+    val rawXmlString = getResponse(indoorArea)
+    val rawResponse = parse2Xml(rawXmlString)
+
+    val mapper = Mapper()
+    val buildings = mapper.parse(rawResponse)
+
     val x = ""
 }
