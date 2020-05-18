@@ -81,7 +81,7 @@ class Mapper {
                 }
 
                 if (allNecessaryStuff){
-                    val building = Building(tmpMinLevel!!, tmpMaxLevel!!, tmpFloors, tmpIndoorObjects, tmpLevelConnections,
+                    val building = Building(relation.id, tmpMinLevel!!, tmpMaxLevel!!, tmpFloors, tmpIndoorObjects, tmpLevelConnections,
                             tmpOutline[0])
                     if (tmpHeight != null) building.height = tmpHeight
                     if (tmpName != null) building.name = tmpName

@@ -25,7 +25,7 @@ class IndoorObject(val level: Int, val indoorTag: IndoorTag) {
     var additionalTags: MutableList<Tag> = mutableListOf()
 }
 
-class Building(val minLevel: Int, val maxLevel: Int, val floors: List<Floor>, val objects: List<IndoorObject>,
+class Building(val id: String, val minLevel: Int, val maxLevel: Int, val floors: List<Floor>, val objects: List<IndoorObject>,
                connections: List<LevelConnection>, val outline: Way){
     var height: Float? = null
     var name: String? = null
