@@ -2,104 +2,130 @@ package de.twoSIT
 
 import de.twoSIT.models.*
 
-class Mapper {
-    fun parse(rawResponse: RawResponse): List<Building> {
-        val allWays = parseWays(rawResponse)
-        val allRelations = mutableMapOf<String, RawRelation>()
+
+class Mapper(rawResponse: RawResponse) {
+    private val allWays = mutableMapOf<String, Way>()
+    private val allRelations = mutableMapOf<String, Relation>()
+    private val allNodes = mutableMapOf<String, Node>()
+
+    private val buildings = mutableListOf<Building>()
+    private val unparsedBuildings = mutableListOf<Building>()
+
+    private lateinit var currentBuilding: Building
+
+
+    init {
+        for (node in rawResponse.nodes) allNodes[node.id] = node
+        parseWays(rawResponse)
         for (relation in rawResponse.relations) allRelations[relation.id] = relation
+    }
 
-        val buildings = mutableListOf<Building>()
+    fun parse(): List<Building> {
+        parseBuildingRel()
 
-        for (relation in rawResponse.relations) {
-            val tmpOutline = mutableListOf<Way>()
-            val tmpFloors = mutableListOf<Floor>()
-            val tmpAdditionalTags = mutableListOf<Tag>()
-            val tmpIndoorObjects = mutableListOf<IndoorObject>()
-            val tmpLevelConnections = mutableListOf<LevelConnection>()
-            var tmpMinLevel: Int? = null
-            var tmpMaxLevel: Int? = null
-            var tmpHeight: Float? = null
-            var tmpName: String? = null
-            var tmpIsBuilding = false
-
-            for (tag in relation.tags) {
-                when (tag.k) {
-                    "type" -> {
-                        if (tag.v == "building"){
-                            tmpIsBuilding = true
-                            for (member in relation.members) {
-                                when (member.type) {
-                                    "way" -> {
-                                        val way = allWays[member.ref]!!
-                                        tmpIndoorObjects.addAll(parseIndoorObjects(way.nodes.values))
-                                        if (!tmpOutline.contains(way)) {
-                                            tmpOutline.add(way)
-                                        } else {
-                                            println("Outline for building-relation ${relation.id} is already defined")
-                                        }
-                                        if (tmpOutline.size > 1) {
-                                            println("Multiple outline for building-relation ${relation.id}")
-                                        }
-                                    }
-                                    "relation" -> {
-                                        parseFloor(allRelations[member.ref]!!)?.let { tmpFloors.add(it) }
-                                    }
-                                    else -> println("Could not parse building-relation member ${member.type}")
-                                }
-                            }
-                        }
-                    }
-                    "building:max_level" -> tmpMaxLevel = tag.v.toIntOrNull()
-                    "building:min_level" -> tmpMinLevel = tag.v.toIntOrNull()
-                    "name" -> tmpName = tag.v
-                    "height" -> tmpHeight = tag.v.toFloatOrNull()
-                    else -> tmpAdditionalTags.add(tag)
-                }
-            }
-
-            if (tmpIsBuilding){
-                var allNecessaryStuff = true
-                if (tmpMinLevel == null) {
-                    allNecessaryStuff = false
-                    println("Could not parse building-relation ${relation.id}: no min-level")
-                }
-                if (tmpMaxLevel == null) {
-                    allNecessaryStuff = false
-                    println("Could not parse building-relation ${relation.id}: no max-level")
-                }
-                if (tmpOutline.size == 0) {
-                    allNecessaryStuff = false
-                    println("Could not parse building-relation ${relation.id}: no outline")
-                }
-                if (tmpOutline.size > 1) {
-                    allNecessaryStuff = false
-                    println("Could not parse building-relation ${relation.id}: too many outlines")
-                }
-                if (tmpFloors.size == 0) {
-                    allNecessaryStuff = false
-                    println("Could not parse building-relation ${relation.id}: no floors")
-                }
-
-                if (allNecessaryStuff){
-                    val building = Building(tmpMinLevel!!, tmpMaxLevel!!, tmpFloors, tmpIndoorObjects, tmpLevelConnections,
-                            tmpOutline[0])
-                    if (tmpHeight != null) building.height = tmpHeight
-                    if (tmpName != null) building.name = tmpName
-                    if (tmpAdditionalTags.size > 0) building.additionalTags.addAll(tmpAdditionalTags)
-                    buildings.add(building)
-                }
-            }
-        }
         return buildings
     }
 
-    private fun parseLevelConnections(): LevelConnection? {
+    private fun getAllBuildingRel(): MutableList<Relation> {
+        val buildingRelations = mutableListOf<Relation>()
+
+        for (relation in allRelations.values) {
+            for (tag in relation.tags) {
+                if (tag.k == "type" && tag.v == "building") buildingRelations.add(relation)
+            }
+        }
+        return buildingRelations
+    }
+
+    private fun parseBuildingRel() {
+        val buildingRelations = getAllBuildingRel()
+        for (relation in buildingRelations) {
+            currentBuilding = Building()
+            currentBuilding.id = relation.id
+
+            for (tag in relation.tags) {
+                when (tag.k) {
+                    "building:max_level" -> currentBuilding.maxLevel = tag.v.toIntOrNull()
+                    "building:min_level" -> currentBuilding.minLevel = tag.v.toIntOrNull()
+                    "name" -> currentBuilding.name = tag.v
+                    "height" -> currentBuilding.height = tag.v.toFloatOrNull()
+                    else -> currentBuilding.additionalTags[tag.k] = tag.v
+                }
+            }
+
+            for (member in relation.members) {
+                when (member.type) {
+                    "way" -> {
+                        if (currentBuilding.mainWay == null) {
+                            currentBuilding.mainWay = allWays[member.ref]
+                        } else {
+                            println("Multiple mainWays for building-relation ${relation.id}")
+                        }
+                    }
+                    "relation" -> {
+                        if (allRelations.containsKey(member.ref)){
+                            parseFloor(allRelations[member.ref]!!)
+                        } else {
+                            println("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
+                        }
+                    }
+                    else -> println("Could not parse building-relation member ${member.type}")
+                }
+            }
+
+            if (currentBuilding.check()) {
+                buildings.add(currentBuilding)
+            } else {
+                unparsedBuildings.add(currentBuilding)
+            }
+        }
+
+    }
+
+    private fun parseFloor(relation: Relation) {
+
+        val floor = Floor()
+        floor.id = relation.id
+
+        // todo floorRef parsing
+
+        for (tag in relation.tags) {
+            when (tag.k) {
+                "level" -> floor.level = tag.v.toIntOrNull()
+                "height" -> floor.height = tag.v.toFloatOrNull()
+                "name" -> floor.name = tag.v
+                else -> floor.additionalTags[tag.k] = tag.v
+            }
+        }
+
+        for (member in relation.members) {
+            when (member.type) {
+                "way" -> {
+                    if (!allWays.containsKey(member.ref)) {
+                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                    } else if (floor.level == null){
+                        println("Cannot parse room ${member.ref}: floor has no level")
+                    }else {
+                        parseRoom(allWays[member.ref]!!, floor.level!!)
+                    }
+                }
+                else -> println("Unrecognized member type while parsing floor-relation ${relation.id}: '${member.type}'")
+            }
+        }
+        if (floor.check()){
+            currentBuilding.floors.add(floor)
+        }
+    }
+
+
+    private fun parseLevelConnections(way: Way): LevelConnection? {
+        val levelConnection = LevelConnection()
+        levelConnection.id = way.id
+
         return null
     }
 
-    private fun parseWays(rawResponse: RawResponse): MutableMap<String, Way> {
-        val allWays: MutableMap<String, Way> = mutableMapOf()
-        val allNodes = parseNodes(rawResponse.nodes)
+    private fun parseWays(rawResponse: RawResponse) {
         for (way in rawResponse.ways) {
             val cleanWay = Way()
             cleanWay.id = way.id
@@ -115,79 +141,35 @@ class Mapper {
             }
             allWays[cleanWay.id] = cleanWay
         }
-        return allWays
     }
 
-    private fun parseNodes(rawNodes: MutableList<Node>): MutableMap<String, Node> {
-        val allNodes = mutableMapOf<String, Node>()
-        for (node in rawNodes) {
-            allNodes[node.id] = node
-        }
-        return allNodes
-    }
+    private fun parseRoom(way: Way, level: Int) {
+        val room = Room()
+        room.id = way.id
+        room.level = level
 
-    private fun parseIndoorObjects(nodes: MutableCollection<Node>): List<IndoorObject> {
-        val indoorObjects = mutableListOf<IndoorObject>()
-
-        for (node in nodes) {
-            var objectLevel: Int? = null
-            var objectHeight: Float? = null
-            var objectName: String? = null
-            var objectRef: String? = null
-            var indoorTag: IndoorTag? = null
-            val additionalObjectTags = mutableListOf<Tag>()
-// todo parse indoorTag
-            for (tag in node.tags) {
-                when (tag.k) {
-                    "level" -> objectLevel = tag.v.toIntOrNull()
-                    "height" -> objectHeight = tag.v.toFloatOrNull()
-                    "name" -> objectName = tag.v
-                    "ref" -> objectRef = tag.v
-                    else -> additionalObjectTags.add(tag)
-                }
-            }
-            if (objectLevel != null && indoorTag != null) {
-                val obj = IndoorObject(level = objectLevel, indoorTag = indoorTag)
-                obj.height = objectHeight
-                obj.name = objectName
-                obj.ref = objectRef
-                obj.additionalTags = additionalObjectTags
-                indoorObjects.add(obj)
-            } else {
-                println("Could not parse indoorObject-node ${node.id}")
-            }
-        }
-        return indoorObjects
-    }
-
-    private fun parseFloor(relation: RawRelation): Floor? {
-        var floorLevel: Int? = null
-        var floorHeight: Float? = null
-        var floorRef: String? = null
-        var floorName: String? = null
-        val additionalFloorTags = mutableListOf<Tag>()
-
-        // todo floorRef parsing
-
-        for (tag in relation.tags) {
+        for (tag in way.tags) {
             when (tag.k) {
-                "level" -> floorLevel = tag.v.toIntOrNull()
-                "height" -> floorHeight = tag.v.toFloatOrNull()
-                "name" -> floorName = tag.v
-                "building" -> println("Floor-relation ${relation.id} has building tag o.O")
-                else -> additionalFloorTags.add(tag) // add all unknown tags
+                "level" -> room.level = tag.v.toIntOrNull()
+                "height" -> room.height = tag.v.toFloatOrNull()
+                "name" -> room.name = tag.v
+                "ref" -> room.ref = tag.v
+                "buildingpart" -> {
+                    when (tag.v) {
+                        "corridor" -> room.indoorTag = IndoorTag.CORRIDOR
+                        "room" -> room.indoorTag = IndoorTag.ROOM
+                        "hall" -> room.indoorTag = IndoorTag.AREA
+                        "verticalpassage" -> parseLevelConnections(way)
+                        "shell" -> currentBuilding.outline = way
+                        else -> println("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
+                    }
+                }
+                else -> room.additionalTags[tag.k] = tag.v
             }
         }
-        if (floorLevel == null) {
-            println("Could not parse floor-relation ${relation.id}: no level tag")
-            return null
+        if (room.check()) {
+            currentBuilding.rooms.add(room)
         }
-
-        val floor = Floor(level = floorLevel)
-        floor.name = floorName
-        floor.height = floorHeight
-        floor.ref = floorRef
-
-        return floor
     }
+
 }

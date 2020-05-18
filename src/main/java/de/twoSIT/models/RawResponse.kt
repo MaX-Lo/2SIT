@@ -55,7 +55,7 @@ abstract class AbstractNode {
 }
 
 
-class RawRelation : AbstractNode() {
+class Relation : AbstractNode() {
     @JacksonXmlProperty(localName = "member")
     var members: MutableList<Member> = mutableListOf()
 }
@@ -142,5 +142,5 @@ class RawResponse {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
-    var relations: MutableList<RawRelation> = mutableListOf()
+    var relations: MutableList<Relation> = mutableListOf()
 }

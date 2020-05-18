@@ -55,8 +55,8 @@ fun main() {
     val rawXmlString = getResponse(indoorArea)
     val rawResponse = parse2Xml(rawXmlString)
 
-    val mapper = Mapper()
-    val buildings = mapper.parse(rawResponse)
+    val mapper = Mapper(rawResponse)
+    val buildings = mapper.parse()
 
     val x = ""
 }
