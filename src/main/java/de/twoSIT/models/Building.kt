@@ -42,6 +42,7 @@ class Room {
     var level: Int? = null
     var indoorTag: IndoorTag? = null
 
+    var outline: Way? = null
     val nodes = mutableListOf<Node>()
     var height: Float? = null
     var name: String? = null
@@ -87,6 +88,23 @@ class Floor {
     }
 }
 
+class IndoorObject{
+    var id: String? = null
+    var level: Int? = null
+    val additionalTags = mutableMapOf<String, String>()
+
+    fun check(): Boolean {
+        if (id == null) {
+            println("Could not parse indoorObject-node: no id")
+            return false
+        }
+        if (level == null) {
+            println("Could not parse indoorObject-node $id: no level")
+            return false
+        }
+        return true
+    }
+}
 
 class Building {
     var id: String? = null
@@ -96,7 +114,9 @@ class Building {
     val connections = mutableListOf<LevelConnection>()
     var outline: Way? = null
     val rooms = mutableListOf<Room>()
+    val indoorObjects = mutableListOf<IndoorObject>()
 
+    var innerline: Way? = null
     var mainWay: Way? = null
     var height: Float? = null
     var name: String? = null

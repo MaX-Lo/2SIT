@@ -63,10 +63,20 @@ class Mapper(rawResponse: RawResponse) {
                         }
                     }
                     "relation" -> {
-                        if (allRelations.containsKey(member.ref)){
+                        if (allRelations.containsKey(member.ref)) {
                             parseFloor(allRelations[member.ref]!!)
                         } else {
                             println("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
+                        }
+                    }
+                    "node" -> {
+                        if (member.role == "entrance"){
+                            if (!allNodes.containsKey(member.ref)){
+                                println("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
+                            } else {
+                                // todo this is a door
+                                val door = allNodes[member.ref]!!
+                            }
                         }
                     }
                     else -> println("Could not parse building-relation member ${member.type}")
@@ -103,26 +113,71 @@ class Mapper(rawResponse: RawResponse) {
                 "way" -> {
                     if (!allWays.containsKey(member.ref)) {
                         println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
-                    } else if (floor.level == null){
+                    } else if (floor.level == null) {
                         println("Cannot parse room ${member.ref}: floor has no level")
-                    }else {
+                    } else {
                         parseRoom(allWays[member.ref]!!, floor.level!!)
+                    }
+                }
+                "node" -> {
+                    if (!allNodes.containsKey(member.ref)) {
+                        println("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
+                    } else if (floor.level == null) {
+                        println("Cannot parse room ${member.ref}: floor has no level")
+                    } else {
+                        parseIndoorObject(allNodes[member.ref]!!, floor.level!!)
+                    }
+                }
+                "relation" -> {
+                    if (!allRelations.containsKey(member.ref)) {
+                        println("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
+                    } else {
+                        val rel = allRelations[member.ref]!!
+                        for (member in rel.members){
+                            when (member.role){
+                                "outer" -> {
+                                    if (!allWays.containsKey(member.ref)){
+                                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                                    } else {
+                                        currentBuilding.outline = allWays[member.ref]!!
+                                    }
+                                }
+                                "inner" -> {
+                                    if (!allWays.containsKey(member.ref)){
+                                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                                    } else {
+                                        currentBuilding.innerline = allWays[member.ref]!!
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 else -> println("Unrecognized member type while parsing floor-relation ${relation.id}: '${member.type}'")
             }
         }
-        if (floor.check()){
+        if (floor.check()) {
             currentBuilding.floors.add(floor)
         }
     }
 
+    private fun parseIndoorObject(node: Node, level: Int) {
+        val indoorObject = IndoorObject()
+        indoorObject.id = node.id
+        indoorObject.level = level
 
-    private fun parseLevelConnections(way: Way): LevelConnection? {
+        for (tag in node.tags) {
+            indoorObject.additionalTags[tag.k] = tag.v
+        }
+
+        if (indoorObject.check()) currentBuilding.indoorObjects.add(indoorObject)
+    }
+
+    private fun parseLevelConnections(way: Way) {
         val levelConnection = LevelConnection()
         levelConnection.id = way.id
 
-        return null
+        if (levelConnection.check()) currentBuilding.connections.add(levelConnection)
     }
 
     private fun parseWays(rawResponse: RawResponse) {
@@ -164,7 +219,7 @@ class Mapper(rawResponse: RawResponse) {
                             return
                         }
                         "shell" -> {
-                            currentBuilding.outline = way
+                             room.outline = way
                             return
                         }
                         else -> println("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
