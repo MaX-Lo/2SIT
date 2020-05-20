@@ -11,16 +11,12 @@ enum class IndoorTag {
     ROOM, AREA, WALL, CORRIDOR
 }
 
-abstract class AbstractCleanBuildingObject {
-    var id: String? = null
-    var additionalTags = mutableMapOf<String, String>()
 
-}
 
-class LevelConnection : AbstractCleanBuildingObject() {
+class LevelConnection(id: String? = null) : AbstractElement(id) {
     val levels = mutableListOf<Int>()
     var indoorTag: IndoorTag? = null
-    val doors = mutableListOf<Node>()
+    val doors = mutableListOf<RawNode>()
     var levelConnectionType: LevelConnectionType? = null
 
     fun check(): Boolean {
@@ -44,16 +40,13 @@ class LevelConnection : AbstractCleanBuildingObject() {
     }
 }
 
-class Way : AbstractCleanBuildingObject() {
-    val nodes = mutableMapOf<String, Node>()
-}
 
-class Room : AbstractCleanBuildingObject() {
+class Room(id: String? = null) : AbstractElement(id) {
     var level: Int? = null
     var indoorTag: IndoorTag? = null
 
     var outline: Way? = null
-    val nodes = mutableListOf<Node>()
+    val nodes = mutableListOf<RawNode>()
     var height: Float? = null
     var name: String? = null
     var ref: String? = null
@@ -76,7 +69,7 @@ class Room : AbstractCleanBuildingObject() {
 }
 
 
-class Floor : AbstractCleanBuildingObject() {
+class Floor(id: String? = null) : AbstractElement(id) {
     var level: Int? = null
     var height: Float? = null
     var ref: String? = null
@@ -96,7 +89,7 @@ class Floor : AbstractCleanBuildingObject() {
     }
 }
 
-class IndoorObject : AbstractCleanBuildingObject() {
+class IndoorObject(id: String? = null) : AbstractElement(id) {
     var level: Int? = null
 
     fun check(): Boolean {
@@ -112,13 +105,12 @@ class IndoorObject : AbstractCleanBuildingObject() {
     }
 }
 
-class Building {
+class Building(id: String? = null): AbstractElement(id) {
     companion object {
         @JvmStatic
         val logger = getLogger(Building::class.java)
     }
 
-    var id: String? = null
     var minLevel: Int? = null
     var maxLevel: Int? = null
     var floors = mutableListOf<Floor>()
@@ -132,7 +124,6 @@ class Building {
     var height: Float? = null
     var name: String? = null
     val nonExistingLevels: MutableList<Int> = mutableListOf()
-    var additionalTags = mutableMapOf<String, String>()
 
     fun check(): Boolean {
         if (id == null) {

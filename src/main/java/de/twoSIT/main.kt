@@ -13,12 +13,11 @@ import java.io.File
 
 const val DEBUG = true
 
+// bounding box examples for a buildings mapped as IndoorOSM and SIT
 val indoorArea = Area(49.41689, 8.67180, 49.41969, 8.67695)
 val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 
 fun getResponse(area: Area): String {
-    // todo log and time the shit
-    // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
 
     val dirName = responseCacheDir
     File(dirName).mkdir()

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 
-class Member {
+class RawMember {
     @JacksonXmlProperty(isAttribute = true)
     var type: String = "not available"
 
@@ -28,7 +28,7 @@ class Tag {
     var v: String = "not available"
 }
 
-abstract class AbstractNode {
+abstract class RawAbstractElement {
     @JacksonXmlProperty(isAttribute = true)
     var id: String = "not available"
 
@@ -55,18 +55,19 @@ abstract class AbstractNode {
 }
 
 
-class Relation : AbstractNode() {
+class RawRelation : RawAbstractElement() {
     @JacksonXmlProperty(localName = "member")
-    var members: MutableList<Member> = mutableListOf()
+    var members: MutableList<RawMember> = mutableListOf()
 }
 
 
-class RawWay : AbstractNode() {
+class RawWay : RawAbstractElement() {
     @JacksonXmlProperty(localName = "nd")
     var nds: MutableList<NodeReference> = mutableListOf()
 }
 
-class Node : AbstractNode() {
+
+class RawNode : RawAbstractElement() {
     @JacksonXmlProperty(isAttribute = true)
     var lat: Float = 0f
 
@@ -110,7 +111,7 @@ class RawResponse {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "node")
-    var nodes: MutableList<Node> = mutableListOf()
+    var nodes: MutableList<RawNode> = mutableListOf()
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "way")
@@ -118,5 +119,5 @@ class RawResponse {
 
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
-    var relations: MutableList<Relation> = mutableListOf()
+    var relations: MutableList<RawRelation> = mutableListOf()
 }

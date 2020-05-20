@@ -15,6 +15,15 @@ import java.io.File
 
 fun getLogger(cls: Class<*>, file: String = defaultLogFile): Logger {
     val logger: Logger = LoggerFactory.getLogger(cls) as Logger
+    return setupLogger(logger, file)
+}
+
+fun getLogger(name: String, file: String = defaultLogFile): Logger {
+    val logger: Logger = LoggerFactory.getLogger(name) as Logger
+    return setupLogger(logger, file)
+}
+
+private fun setupLogger(logger: Logger, file: String = defaultLogFile): Logger {
     logger.setLevel(Level.INFO)
     logger.setAdditive(false) /* set to true if root should log too */
 
