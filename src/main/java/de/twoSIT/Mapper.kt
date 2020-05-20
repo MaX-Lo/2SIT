@@ -123,7 +123,12 @@ class Mapper(rawResponse: RawResponse) {
                     } else if (floor.level == null) {
                         logger.warn("Cannot parse room ${member.ref}: floor has no level")
                     } else {
-                        parseRoom(allWays[member.ref]!!, floor.level!!)
+                        val way = allWays[member.ref]!!
+                        if ("level:usage" in way.additionalTags.keys){
+                            floor.usages[way.additionalTags["level:usage"]!!] = way
+                        } else {
+                            parseRoom(way, floor.level!!)
+                        }
                     }
                 }
                 "node" -> {
@@ -191,17 +196,19 @@ class Mapper(rawResponse: RawResponse) {
         for (way in rawResponse.ways) {
             val cleanWay = Way()
             cleanWay.id = way.id
-            cleanWay.visible = way.visible
-            cleanWay.version = way.version
-            cleanWay.changeset = way.changeset
-            cleanWay.timestamp = way.timestamp
-            cleanWay.user = way.user
-            cleanWay.uid = way.uid
-            cleanWay.tags = way.tags
             for (nodeRef in way.nds) {
                 cleanWay.nodes[nodeRef.ref] = allNodes[nodeRef.ref]!!
             }
-            allWays[cleanWay.id] = cleanWay
+            cleanWay.additionalTags["visible"] = way.visible.toString()
+            cleanWay.additionalTags["version"] = way.version.toString()
+            cleanWay.additionalTags["changeset"] = way.changeset
+            cleanWay.additionalTags["timestamp"] = way.timestamp
+            cleanWay.additionalTags["user"] = way.user
+            cleanWay.additionalTags["uid"] = way.uid
+            for (tag in way.tags){
+                cleanWay.additionalTags[tag.k] = tag.v
+            }
+            allWays[cleanWay.id!!] = cleanWay
         }
     }
 
@@ -210,14 +217,14 @@ class Mapper(rawResponse: RawResponse) {
         room.id = way.id
         room.level = level
 
-        for (tag in way.tags) {
-            when (tag.k) {
-                "level" -> room.level = tag.v.toIntOrNull()
-                "height" -> room.height = tag.v.toFloatOrNull()
-                "name" -> room.name = tag.v
-                "ref" -> room.ref = tag.v
+        for ((key, value) in way.additionalTags.entries) {
+            when (key) {
+                "level" -> room.level = value.toIntOrNull()
+                "height" -> room.height = value.toFloatOrNull()
+                "name" -> room.name = value
+                "ref" -> room.ref = value
                 "buildingpart" -> {
-                    when (tag.v) {
+                    when (value) {
                         "corridor" -> room.indoorTag = IndoorTag.CORRIDOR
                         "room" -> room.indoorTag = IndoorTag.ROOM
                         "hall" -> room.indoorTag = IndoorTag.AREA
@@ -229,10 +236,10 @@ class Mapper(rawResponse: RawResponse) {
                             room.outline = way
                             return
                         }
-                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
+                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
                     }
                 }
-                else -> room.additionalTags[tag.k] = tag.v
+                else -> room.additionalTags[key] = value
             }
         }
         if (room.check()) {
