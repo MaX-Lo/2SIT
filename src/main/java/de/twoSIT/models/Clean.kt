@@ -1,6 +1,5 @@
 package de.twoSIT.models
 
-import de.twoSIT.Mapper
 import de.twoSIT.util.getLogger
 
 val logger = getLogger("Clean")
@@ -38,6 +37,12 @@ class Node(id: String? = null): AbstractElement(id) {
     companion object {
         fun fromRawNode(rawNode: RawNode): Node {
             val node = Node(rawNode.id)
+            node.additionalTags["visible"] = rawNode.visible.toString()
+            node.additionalTags["version"] = rawNode.version.toString()
+            node.additionalTags["changeset"] = rawNode.changeset
+            node.additionalTags["timestamp"] = rawNode.timestamp
+            node.additionalTags["user"] = rawNode.user
+            node.additionalTags["uid"] = rawNode.uid
             for (tag in rawNode.tags){
                 node.additionalTags[tag.k] = tag.v
             }
@@ -66,6 +71,12 @@ class Relation(id: String? = null): AbstractElement(id) {
                 }
             }
 
+            relation.additionalTags["visible"] = rawRelation.visible.toString()
+            relation.additionalTags["version"] = rawRelation.version.toString()
+            relation.additionalTags["changeset"] = rawRelation.changeset
+            relation.additionalTags["timestamp"] = rawRelation.timestamp
+            relation.additionalTags["user"] = rawRelation.user
+            relation.additionalTags["uid"] = rawRelation.uid
             for (tag in rawRelation.tags){
                 relation.additionalTags[tag.k] = tag.v
             }

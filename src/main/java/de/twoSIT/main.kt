@@ -18,7 +18,6 @@ val indoorArea = Area(49.41689, 8.67180, 49.41969, 8.67695)
 val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 
 fun getResponse(area: Area): String {
-
     val dirName = responseCacheDir
     File(dirName).mkdir()
     val cached = File("$dirName/${responseFileName(area)}")
@@ -27,8 +26,8 @@ fun getResponse(area: Area): String {
         return cached.readText()
     }
 
-    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=${area.minLatitude},${area.minLongitude}," +
-            "${area.maxLatitude},${area.maxLongitude}"
+//    val url = "https://api.openstreetmap.org/api/0.6/map?bbox=${area.minLatitude},${area.minLongitude},${area.maxLatitude},${area.maxLongitude}"
+    val url = "http://141.76.16.34:8084/api/0.6/map?bbox=${area.minLatitude},${area.minLongitude},${area.maxLatitude},${area.maxLongitude}"
     val rawXml = Request.Get(url).execute().returnContent().asString()
 
     if (DEBUG){
