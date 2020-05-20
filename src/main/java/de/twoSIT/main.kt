@@ -2,6 +2,8 @@ package de.twoSIT
 
 import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import de.twoSIT.const.responseCacheDir
+import de.twoSIT.const.responseFileName
 import de.twoSIT.models.Area
 import de.twoSIT.models.Building
 import de.twoSIT.models.RawResponse
@@ -18,10 +20,9 @@ fun getResponse(area: Area): String {
     // todo log and time the shit
     // todo 2 add some fault tolerance, maybe check network access, website availability and all the good stuff up front
 
-    val dirName = "responses"
+    val dirName = responseCacheDir
     File(dirName).mkdir()
-    val cached = File("$dirName/response_${area.minLatitude}_${area.minLongitude}_${area.maxLatitude}_" +
-            "${area.maxLongitude}.xml")
+    val cached = File("$dirName/${responseFileName(area)}")
 
     if (DEBUG && cached.exists()) {
         return cached.readText()

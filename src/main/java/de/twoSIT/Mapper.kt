@@ -1,9 +1,16 @@
 package de.twoSIT
 
 import de.twoSIT.models.*
+import de.twoSIT.util.getLogger
 
 
 class Mapper(rawResponse: RawResponse) {
+    companion object {
+        @JvmStatic
+        private val logger = getLogger(Mapper::class.java)
+    }
+
+
     private val allWays = mutableMapOf<String, Way>()
     private val allRelations = mutableMapOf<String, Relation>()
     private val allNodes = mutableMapOf<String, Node>()
@@ -59,27 +66,27 @@ class Mapper(rawResponse: RawResponse) {
                         if (currentBuilding.mainWay == null) {
                             currentBuilding.mainWay = allWays[member.ref]
                         } else {
-                            println("Multiple mainWays for building-relation ${relation.id}")
+                            logger.info("Multiple mainWays for building-relation ${relation.id}")
                         }
                     }
                     "relation" -> {
                         if (allRelations.containsKey(member.ref)) {
                             parseFloor(allRelations[member.ref]!!)
                         } else {
-                            println("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
+                            logger.warn("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
                         }
                     }
                     "node" -> {
-                        if (member.role == "entrance"){
-                            if (!allNodes.containsKey(member.ref)){
-                                println("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
+                        if (member.role == "entrance") {
+                            if (!allNodes.containsKey(member.ref)) {
+                                logger.warn("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
                             } else {
                                 // todo this is a door
                                 val door = allNodes[member.ref]!!
                             }
                         }
                     }
-                    else -> println("Could not parse building-relation member ${member.type}")
+                    else -> logger.info("Could not parse building-relation member ${member.type}")
                 }
             }
 
@@ -112,39 +119,39 @@ class Mapper(rawResponse: RawResponse) {
             when (member.type) {
                 "way" -> {
                     if (!allWays.containsKey(member.ref)) {
-                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                        logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
                     } else if (floor.level == null) {
-                        println("Cannot parse room ${member.ref}: floor has no level")
+                        logger.warn("Cannot parse room ${member.ref}: floor has no level")
                     } else {
                         parseRoom(allWays[member.ref]!!, floor.level!!)
                     }
                 }
                 "node" -> {
                     if (!allNodes.containsKey(member.ref)) {
-                        println("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
+                        logger.warn("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
                     } else if (floor.level == null) {
-                        println("Cannot parse room ${member.ref}: floor has no level")
+                        logger.warn("Cannot parse room ${member.ref}: floor has no level")
                     } else {
                         parseIndoorObject(allNodes[member.ref]!!, floor.level!!)
                     }
                 }
                 "relation" -> {
                     if (!allRelations.containsKey(member.ref)) {
-                        println("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
+                        logger.warn("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
                     } else {
                         val rel = allRelations[member.ref]!!
-                        for (member in rel.members){
-                            when (member.role){
+                        for (member in rel.members) {
+                            when (member.role) {
                                 "outer" -> {
-                                    if (!allWays.containsKey(member.ref)){
-                                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                                    if (!allWays.containsKey(member.ref)) {
+                                        logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
                                     } else {
                                         currentBuilding.outline = allWays[member.ref]!!
                                     }
                                 }
                                 "inner" -> {
-                                    if (!allWays.containsKey(member.ref)){
-                                        println("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                                    if (!allWays.containsKey(member.ref)) {
+                                        logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
                                     } else {
                                         currentBuilding.innerline = allWays[member.ref]!!
                                     }
@@ -153,7 +160,7 @@ class Mapper(rawResponse: RawResponse) {
                         }
                     }
                 }
-                else -> println("Unrecognized member type while parsing floor-relation ${relation.id}: '${member.type}'")
+                else -> logger.info("Unrecognized member type while parsing floor-relation ${relation.id}: '${member.type}'")
             }
         }
         if (floor.check()) {
@@ -219,10 +226,10 @@ class Mapper(rawResponse: RawResponse) {
                             return
                         }
                         "shell" -> {
-                             room.outline = way
+                            room.outline = way
                             return
                         }
-                        else -> println("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
+                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${tag.v}'")
                     }
                 }
                 else -> room.additionalTags[tag.k] = tag.v

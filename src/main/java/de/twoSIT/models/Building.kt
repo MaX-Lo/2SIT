@@ -1,5 +1,7 @@
 package de.twoSIT.models
 
+import de.twoSIT.util.getLogger
+
 
 enum class LevelConnectionType {
     STAIRS, CONVEYOR, ELEVATOR
@@ -17,20 +19,20 @@ class LevelConnection {
 
     fun check(): Boolean {
         if (id == null) {
-            println("Could not parse levelConnection-way: no id")
+            Building.logger.warn("Could not parse levelConnection-way: no id")
             return false
         }
         if (indoorTag == null) {
-            println("Could not parse levelConnection-way $id: no indoor tag")
+            Building.logger.warn("Could not parse levelConnection-way $id: no indoor tag")
             return false
         }
         if (indoorTag == null) {
-            println("Could not parse levelConnection-way $id: wrong indoor tag '$indoorTag', " +
+            Building.logger.warn("Could not parse levelConnection-way $id: wrong indoor tag '$indoorTag', " +
                     "has to be 'CORRIDOR' or 'AREA'")
             return false
         }
         if (doors.isEmpty()) {
-            println("Could not parse levelConnection-way $id: no doors")
+            Building.logger.warn("Could not parse levelConnection-way $id: no doors")
             return false
         }
         return true
@@ -51,15 +53,15 @@ class Room {
 
     fun check(): Boolean {
         if (id == null) {
-            println("Could not parse floor-relation: no id")
+            Building.logger.warn("Could not parse floor-relation: no id")
             return false
         }
         if (level == null) {
-            println("Could not parse Room-way $id: no level")
+            Building.logger.warn("Could not parse Room-way $id: no level")
             return false
         }
         if (indoorTag == null) {
-            println("Could not parse Room-way $id: no indoor tag")
+            Building.logger.warn("Could not parse Room-way $id: no indoor tag")
             return false
         }
         return true
@@ -77,11 +79,11 @@ class Floor {
 
     fun check(): Boolean {
         if (id == null) {
-            println("Could not parse floor-relation: no id")
+            Building.logger.warn("Could not parse floor-relation: no id")
             return false
         }
         if (level == null) {
-            println("Could not parse floor-relation $id: no level")
+            Building.logger.warn("Could not parse floor-relation $id: no level")
             return false
         }
         return true
@@ -95,11 +97,11 @@ class IndoorObject{
 
     fun check(): Boolean {
         if (id == null) {
-            println("Could not parse indoorObject-node: no id")
+            Building.logger.warn("Could not parse indoorObject-node: no id")
             return false
         }
         if (level == null) {
-            println("Could not parse indoorObject-node $id: no level")
+            Building.logger.warn("Could not parse indoorObject-node $id: no level")
             return false
         }
         return true
@@ -107,6 +109,11 @@ class IndoorObject{
 }
 
 class Building {
+    companion object {
+        @JvmStatic
+        val logger = getLogger(Building::class.java)
+    }
+
     var id: String? = null
     var minLevel: Int? = null
     var maxLevel: Int? = null
@@ -125,23 +132,23 @@ class Building {
 
     fun check(): Boolean {
         if (id == null) {
-            println("Could not parse building-relation: no id")
+            logger.warn("Could not parse building-relation: no id")
             return false
         }
         if (minLevel == null) {
-            println("Could not parse building-relation $id: no min-level")
+            logger.warn("Could not parse building-relation $id: no min-level")
             return false
         }
         if (maxLevel == null) {
-            println("Could not parse building-relation $id: no max-level")
+            logger.warn("Could not parse building-relation $id: no max-level")
             return false
         }
         if (outline == null) {
-            println("Could not parse building-relation $id: no outline")
+            logger.warn("Could not parse building-relation $id: no outline")
             return false
         }
         if (floors.size == 0) {
-            println("Could not parse building-relation ${id}: no floors")
+            logger.warn("Could not parse building-relation ${id}: no floors")
             return false
         }
         return true
