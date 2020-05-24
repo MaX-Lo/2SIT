@@ -18,7 +18,7 @@ class Mapper(rawResponse: RawResponse) {
     private val buildings = mutableListOf<Building>()
     private val unparsedBuildings = mutableListOf<Building>()
 
-    private lateinit var currentBuilding: Building
+    private lateinit var building: Building
 
 
     init {
@@ -29,7 +29,6 @@ class Mapper(rawResponse: RawResponse) {
 
     fun parse(): List<Building> {
         parseBuildingRel()
-
         return buildings
     }
 
@@ -46,17 +45,15 @@ class Mapper(rawResponse: RawResponse) {
     private fun parseBuildingRel() {
         val buildingRelations = getAllBuildingRel()
         for (relation in buildingRelations) {
-            currentBuilding = Building()
-            currentBuilding.id = relation.id
-
+            building = Building(relation.id)
 
             for ((tag, value) in relation.additionalTags.entries) {
                 when (tag) {
-                    "building:max_level" -> currentBuilding.maxLevel = value.toIntOrNull()
-                    "building:min_level" -> currentBuilding.minLevel = value.toIntOrNull()
-                    "name" -> currentBuilding.name = value
-                    "height" -> currentBuilding.height = value.toFloatOrNull()
-                    else -> currentBuilding.additionalTags[tag] = value
+                    "building:max_level" -> building.maxLevel = value.toIntOrNull()
+                    "building:min_level" -> building.minLevel = value.toIntOrNull()
+                    "name" -> building.name = value
+                    "height" -> building.height = value.toFloatOrNull()
+                    else -> building.additionalTags[tag] = value
                 }
             }
 
@@ -72,8 +69,8 @@ class Mapper(rawResponse: RawResponse) {
             }
 
             for (member in relation.wayMembers) {
-                if (currentBuilding.mainWay == null) {
-                    currentBuilding.mainWay = allWays[member.ref]
+                if (building.mainWay == null) {
+                    building.mainWay = allWays[member.ref]
                 } else {
                     logger.info("Multiple mainWays for building-relation ${relation.id}")
                 }
@@ -87,10 +84,10 @@ class Mapper(rawResponse: RawResponse) {
                 }
             }
 
-            if (currentBuilding.check()) {
-                buildings.add(currentBuilding)
+            if (building.check()) {
+                buildings.add(building)
             } else {
-                unparsedBuildings.add(currentBuilding)
+                unparsedBuildings.add(building)
             }
         }
 
@@ -147,14 +144,14 @@ class Mapper(rawResponse: RawResponse) {
                             if (!allWays.containsKey(relationMember.ref)) {
                                 logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
                             } else {
-                                currentBuilding.outline = allWays[relationMember.ref]!!
+                                building.outline = allWays[relationMember.ref]!!
                             }
                         }
                         "inner" -> {
                             if (!allWays.containsKey(relationMember.ref)) {
                                 logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
                             } else {
-                                currentBuilding.innerline = allWays[relationMember.ref]!!
+                                building.innerline = allWays[relationMember.ref]!!
                             }
                         }
                     }
@@ -163,7 +160,7 @@ class Mapper(rawResponse: RawResponse) {
         }
 
         if (floor.check()) {
-            currentBuilding.floors.add(floor)
+            building.floors.add(floor)
         }
     }
 
@@ -172,12 +169,12 @@ class Mapper(rawResponse: RawResponse) {
         indoorObject.level = level
         indoorObject.additionalTags.putAll(node.additionalTags)
 
-        if (indoorObject.check()) currentBuilding.indoorObjects.add(indoorObject)
+        if (indoorObject.check()) building.indoorObjects.add(indoorObject)
     }
 
     private fun parseLevelConnections(way: Way) {
         val levelConnection = LevelConnection(way.id)
-        if (levelConnection.check()) currentBuilding.connections.add(levelConnection)
+        if (levelConnection.check()) building.connections.add(levelConnection)
     }
 
     private fun parseRoom(way: Way, level: Int) {
@@ -210,7 +207,7 @@ class Mapper(rawResponse: RawResponse) {
             }
         }
         if (room.check()) {
-            currentBuilding.rooms.add(room)
+            building.rooms.add(room)
         }
     }
 

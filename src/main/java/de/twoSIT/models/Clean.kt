@@ -7,6 +7,15 @@ val logger = getLogger("Clean")
 abstract class AbstractElement(var id: String? = null) {
     var additionalTags = mutableMapOf<String, String>()
 
+    fun mapCommonTags(rawElement: RawAbstractElement) {
+        additionalTags["visible"] = rawElement.visible.toString()
+        additionalTags["version"] = rawElement.version.toString()
+        additionalTags["changeset"] = rawElement.changeset
+        additionalTags["timestamp"] = rawElement.timestamp
+        additionalTags["user"] = rawElement.user
+        additionalTags["uid"] = rawElement.uid
+    }
+
 }
 
 class Way(id: String? = null): AbstractElement(id) {
@@ -18,12 +27,7 @@ class Way(id: String? = null): AbstractElement(id) {
             for (nodeRef in rawWay.nds) {
                 way.nodes[nodeRef.ref] = nodes[nodeRef.ref]!!
             }
-            way.additionalTags["visible"] = rawWay.visible.toString()
-            way.additionalTags["version"] = rawWay.version.toString()
-            way.additionalTags["changeset"] = rawWay.changeset
-            way.additionalTags["timestamp"] = rawWay.timestamp
-            way.additionalTags["user"] = rawWay.user
-            way.additionalTags["uid"] = rawWay.uid
+            way.mapCommonTags(rawWay)
             for (tag in rawWay.tags){
                 way.additionalTags[tag.k] = tag.v
             }
@@ -37,12 +41,7 @@ class Node(id: String? = null): AbstractElement(id) {
     companion object {
         fun fromRawNode(rawNode: RawNode): Node {
             val node = Node(rawNode.id)
-            node.additionalTags["visible"] = rawNode.visible.toString()
-            node.additionalTags["version"] = rawNode.version.toString()
-            node.additionalTags["changeset"] = rawNode.changeset
-            node.additionalTags["timestamp"] = rawNode.timestamp
-            node.additionalTags["user"] = rawNode.user
-            node.additionalTags["uid"] = rawNode.uid
+            node.mapCommonTags(rawNode)
             for (tag in rawNode.tags){
                 node.additionalTags[tag.k] = tag.v
             }
@@ -70,13 +69,7 @@ class Relation(id: String? = null): AbstractElement(id) {
                     else -> logger.info("unexpected membertype found: ${rawMember.type}")
                 }
             }
-
-            relation.additionalTags["visible"] = rawRelation.visible.toString()
-            relation.additionalTags["version"] = rawRelation.version.toString()
-            relation.additionalTags["changeset"] = rawRelation.changeset
-            relation.additionalTags["timestamp"] = rawRelation.timestamp
-            relation.additionalTags["user"] = rawRelation.user
-            relation.additionalTags["uid"] = rawRelation.uid
+            relation.mapCommonTags(rawRelation)
             for (tag in rawRelation.tags){
                 relation.additionalTags[tag.k] = tag.v
             }
