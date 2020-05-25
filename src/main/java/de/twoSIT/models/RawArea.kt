@@ -1,10 +1,16 @@
 package de.twoSIT.models
 
-import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
+import java.io.FileInputStream
+import java.io.StringReader
+import javax.xml.stream.XMLInputFactory
+import javax.xml.stream.XMLStreamReader
+import javax.xml.transform.Source
+
 
 class RawMember {
     @JacksonXmlProperty(isAttribute = true)
@@ -62,20 +68,47 @@ class RawRelation : RawAbstractElement() {
     var members: MutableList<RawMember> = mutableListOf()
 }
 
-@JacksonXmlRootElement(localName = "osm")
+@JacksonXmlRootElement(localName = "way")
 class RawWay : RawAbstractElement() {
     companion object {
         @JvmStatic
-        fun fromString(rawXmlString: String): RawWay{
+        fun fromString(rawXmlString: String): RawWay {
             // todo add some fault tolerance here too
-            val module = JacksonXmlModule()
-            module.setDefaultUseWrapper(false)
-            val xmlMapper = XmlMapper(module)
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+            sr.next()
 
-            return xmlMapper.readValue(rawXmlString, RawWay::class.java)
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+            return xmlMapper.readValue(sr, RawWay::class.java)
+        }
+
+        @JvmStatic
+        fun multipleFromString(rawXmlString: String): MutableList<RawWay> {
+            val resultList = mutableListOf<RawWay>()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+
+            try {
+                while (sr.hasNext()){
+                    sr.next()
+                    resultList.add(xmlMapper.readValue(sr, RawWay::class.java))
+                }
+            } catch (e: NoSuchElementException){
+                // stupid fucking xml parsing shit fuuuuu
+            }
+
+            return resultList
         }
     }
-
 
     @JacksonXmlProperty(localName = "nd")
     var nds: MutableList<NodeReference> = mutableListOf()
@@ -108,11 +141,10 @@ class BoundingBox {
 class RawArea {
     companion object {
         @JvmStatic
-        fun fromString(rawXmlString: String): RawArea{
+        fun fromString(rawXmlString: String): RawArea {
             // todo add some fault tolerance here too
-            val module = JacksonXmlModule()
-            module.setDefaultUseWrapper(false)
-            val xmlMapper = XmlMapper(module)
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
 
             return xmlMapper.readValue(rawXmlString, RawArea::class.java)
         }
