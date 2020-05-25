@@ -2,17 +2,18 @@ package de.twoSIT
 
 import de.twoSIT.const.*
 import de.twoSIT.models.Area
+import de.twoSIT.util.SingletonHolder
 import de.twoSIT.util.getLogger
 import org.apache.http.client.fluent.Request
 import java.io.File
 
-class Requester(private val baseUrl: String) {
-    companion object {
+class Requester private constructor(private val baseUrl: String) {
+    companion object : SingletonHolder<Requester, String>(::Requester) {
         @JvmStatic
         private val logger = getLogger(Requester::class.java)
     }
 
-    fun requestRelation(id: String, useCache: Boolean = true) : String {
+    fun requestRelation(id: String, useCache: Boolean = true): String {
         if (useCache) {
             val dirName = responseCacheDir
             File(dirName).mkdir()

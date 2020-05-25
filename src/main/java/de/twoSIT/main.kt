@@ -13,7 +13,7 @@ val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 
 fun main() {
     // val requester = Requester("http://141.76.16.34:8084/api/0.6/")  // uni-server
-    val requester = Requester("https://api.openstreetmap.org/api/0.6/")
+    val requester = Requester.getInstance("https://api.openstreetmap.org/api/0.6/")
 
     val rawXmlString = requester.requestArea(indoorArea)
     val rawArea = RawArea.fromString(rawXmlString)

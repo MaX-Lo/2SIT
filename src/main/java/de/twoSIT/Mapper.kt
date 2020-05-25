@@ -37,12 +37,19 @@ class Mapper {
 
     private fun fillMissing() {
         val missingStuff = getMissingStuff()
+        val requester = Requester.getInstance("https://api.openstreetmap.org/api/0.6/")
 
         val missingNodes = missingStuff.first
         val missingWays = missingStuff.second
         val missingRelations = missingStuff.third
 
-        val requester = Requester("https://api.openstreetmap.org/api/0.6/")
+        fun fetchNodes(missingNodes: List<String>){
+            if (missingNodes.isNotEmpty()){
+                logger.info("Fetching ${missingNodes.size} nodes")
+                val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
+                for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
+            }
+        }
         if (missingWays.isNotEmpty()){
             logger.info("Fetching ${missingWays.size} ways")
             val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
@@ -52,18 +59,10 @@ class Mapper {
                     if (!allNodes.containsKey(nodeRef.ref)) missingNodes.add(nodeRef.ref)
                 }
             }
-            if (missingNodes.isNotEmpty()){
-                logger.info("Fetching ${missingNodes.size} nodes")
-                val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
-                for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
-            }
+            fetchNodes(missingNodes)
             for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
         }
-        if (missingNodes.isNotEmpty()){
-            logger.info("Fetching ${missingNodes.size} nodes")
-            val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
-            for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
-        }
+        fetchNodes(missingNodes)
         if (missingRelations.isNotEmpty()){
             logger.info("Fetching ${missingRelations.size} relations")
             val relationList = RawRelation.multipleFromString(requester.requestNodes(missingRelations))
@@ -87,7 +86,6 @@ class Mapper {
 
         return Triple(missingNodes, missingWays, missingRelations)
     }
-
 
     private fun getMissingStuffBuilding(buildingRelation: Relation): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
         val missingNodes = mutableListOf<String>()
@@ -163,20 +161,12 @@ class Mapper {
 
             for (member in relation.nodeMembers) {
                 if (member.role == "entrance") {
-                    if (!allNodes.containsKey(member.ref)) {
-                        logger.warn("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
-                    } else {
-                        // todo this is a door
-                        val door = allNodes[member.ref]!!
-                    }
+                    // todo this is a door
+                    val door = allNodes[member.ref]!!
                 }
             }
 
             for (member in relation.wayMembers) {
-                if (!allWays.containsKey(member.ref)) {
-                    logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
-                    continue
-                }
                 if (building.mainWay == null) {
                     building.mainWay = allWays[member.ref]
                 } else {
@@ -185,11 +175,7 @@ class Mapper {
             }
 
             for (member in relation.relationMembers) {
-                if (allRelations.containsKey(member.ref)) {
-                    parseFloor(allRelations[member.ref]!!, building)
-                } else {
-                    logger.warn("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
-                }
+                parseFloor(allRelations[member.ref]!!, building)
             }
 
             if (building.check()) {
@@ -216,9 +202,7 @@ class Mapper {
         }
 
         for (member in relation.nodeMembers) {
-            if (!allNodes.containsKey(member.ref)) {
-                logger.warn("FATAL: Could not find ${member.ref} in allNodes... oh nooo")
-            } else if (floor.level == null) {
+            if (floor.level == null) {
                 logger.warn("Cannot parse room ${member.ref}: floor has no level")
             } else {
                 parseIndoorObject(allNodes[member.ref]!!, floor.level!!, building)
@@ -226,9 +210,7 @@ class Mapper {
         }
 
         for (member in relation.wayMembers) {
-            if (!allWays.containsKey(member.ref)) {
-                logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
-            } else if (floor.level == null) {
+            if (floor.level == null) {
                 logger.warn("Cannot parse room ${member.ref}: floor has no level")
             } else {
                 val way = allWays[member.ref]!!
@@ -241,25 +223,15 @@ class Mapper {
         }
 
         for (member in relation.relationMembers) {
-            if (!allRelations.containsKey(member.ref)) {
-                logger.warn("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
-            } else {
-                val rel = allRelations[member.ref]!!
-                for (relationMember in rel.wayMembers) {
-                    when (relationMember.role) {
-                        "outer" -> {
-                            if (!allWays.containsKey(relationMember.ref)) {
-                                logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
-                            } else {
-                                building.outline = allWays[relationMember.ref]!!
-                            }
-                        }
-                        "inner" -> {
-                            if (!allWays.containsKey(relationMember.ref)) {
-                                logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
-                            } else {
-                                building.innerline = allWays[relationMember.ref]!!
-                            }
+            val rel = allRelations[member.ref]!!
+            for (relationMember in rel.wayMembers) {
+                when (relationMember.role) {
+                    "outer" -> building.outline = allWays[relationMember.ref]!!
+                    "inner" -> {
+                        if (!allWays.containsKey(relationMember.ref)) {
+                            logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
+                        } else {
+                            building.innerline = allWays[relationMember.ref]!!
                         }
                     }
                 }
