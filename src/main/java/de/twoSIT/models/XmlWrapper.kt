@@ -5,11 +5,9 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
-import java.io.FileInputStream
 import java.io.StringReader
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
-import javax.xml.transform.Source
 
 
 class RawMember {
