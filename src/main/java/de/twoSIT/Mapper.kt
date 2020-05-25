@@ -4,7 +4,7 @@ import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
 
 
-class Mapper(rawResponse: RawResponse) {
+class Mapper(rawArea: RawArea) {
     companion object {
         @JvmStatic
         private val logger = getLogger(Mapper::class.java)
@@ -22,9 +22,9 @@ class Mapper(rawResponse: RawResponse) {
 
 
     init {
-        for (rawNode in rawResponse.nodes) allNodes[rawNode.id] = Node.fromRawNode(rawNode)
-        for (way in rawResponse.ways) allWays[way.id] =  Way.fromRawWay(way, allNodes)
-        for (rawRelation in rawResponse.relations) allRelations[rawRelation.id] = Relation.fromRawRelation(rawRelation)
+        for (rawNode in rawArea.nodes) allNodes[rawNode.id] = Node.fromRawNode(rawNode)
+        for (way in rawArea.ways) allWays[way.id] =  Way.fromRawWay(way, allNodes)
+        for (rawRelation in rawArea.relations) allRelations[rawRelation.id] = Relation.fromRawRelation(rawRelation)
     }
 
     fun parse(): List<Building> {
