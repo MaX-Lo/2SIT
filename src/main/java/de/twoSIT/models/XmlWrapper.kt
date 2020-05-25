@@ -72,6 +72,7 @@ abstract class RawAbstractElement {
             }
 
             return resultList
+        }
     }
 
     @JacksonXmlProperty(isAttribute = true)
