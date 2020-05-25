@@ -1,5 +1,7 @@
 package de.twoSIT.models
 
+import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
@@ -36,7 +38,7 @@ abstract class RawAbstractElement {
     var visible: Boolean = false
 
     @JacksonXmlProperty(isAttribute = true)
-    var version: Int = 0
+    var version: Float = 0f
 
     @JacksonXmlProperty(isAttribute = true)
     var changeset: String = "not available"
@@ -60,8 +62,21 @@ class RawRelation : RawAbstractElement() {
     var members: MutableList<RawMember> = mutableListOf()
 }
 
-
+@JacksonXmlRootElement(localName = "osm")
 class RawWay : RawAbstractElement() {
+    companion object {
+        @JvmStatic
+        fun fromString(rawXmlString: String): RawWay{
+            // todo add some fault tolerance here too
+            val module = JacksonXmlModule()
+            module.setDefaultUseWrapper(false)
+            val xmlMapper = XmlMapper(module)
+
+            return xmlMapper.readValue(rawXmlString, RawWay::class.java)
+        }
+    }
+
+
     @JacksonXmlProperty(localName = "nd")
     var nds: MutableList<NodeReference> = mutableListOf()
 }
@@ -90,7 +105,19 @@ class BoundingBox {
 }
 
 @JacksonXmlRootElement(localName = "osm")
-class RawResponse {
+class RawArea {
+    companion object {
+        @JvmStatic
+        fun fromString(rawXmlString: String): RawArea{
+            // todo add some fault tolerance here too
+            val module = JacksonXmlModule()
+            module.setDefaultUseWrapper(false)
+            val xmlMapper = XmlMapper(module)
+
+            return xmlMapper.readValue(rawXmlString, RawArea::class.java)
+        }
+    }
+
     @JacksonXmlProperty(isAttribute = true)
     var version: String = "not available"
 
