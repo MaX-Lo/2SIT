@@ -28,13 +28,12 @@ class NodeReference {
     var ref: String = "not available"
 }
 
-class Tag {
-    @JacksonXmlProperty(isAttribute = true)
-    var k: String = "not available"
-
-    @JacksonXmlProperty(isAttribute = true)
-    var v: String = "not available"
-}
+class Tag(
+        @JacksonXmlProperty(isAttribute = true)
+        var k: String = "not available",
+        @JacksonXmlProperty(isAttribute = true)
+        var v: String = "not available"
+)
 
 abstract class RawAbstractElement {
     @JacksonXmlProperty(isAttribute = true)

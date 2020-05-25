@@ -50,7 +50,11 @@ class Mapper(rawArea: RawArea) {
             for ((tag, value) in relation.additionalTags.entries) {
                 when (tag) {
                     "building:max_level" -> building.maxLevel = value.toIntOrNull()
-                    "building:min_level" -> building.minLevel = value.toIntOrNull()
+                    "building:min_level" -> {
+                        building.minLevel = value.toIntOrNull()
+                        // keep tag since it's used not only by indoorOSM
+                        building.additionalTags["building:min_level"] = value
+                    }
                     "name" -> building.name = value
                     "height" -> building.height = value.toFloatOrNull()
                     else -> building.additionalTags[tag] = value
