@@ -27,7 +27,10 @@ abstract class AbstractElement(var id: String? = null) {
 
         element.tags = mutableListOf()
         for (tag in additionalTags) {
-            element.tags.add(Tag(tag.key, tag.value))
+            val newTag = Tag()
+            newTag.k = tag.key
+            newTag.v = tag.value
+            element.tags.add(newTag)
         }
     }
 }

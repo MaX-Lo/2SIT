@@ -26,12 +26,13 @@ class NodeReference {
     var ref: String = "not available"
 }
 
-class Tag(
-        @JacksonXmlProperty(isAttribute = true)
-        var k: String = "not available",
-        @JacksonXmlProperty(isAttribute = true)
-        var v: String = "not available"
-)
+class Tag {
+    @JacksonXmlProperty(isAttribute = true)
+    var k: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var v: String = "not available"
+}
 
 abstract class RawAbstractElement {
 
@@ -202,15 +203,12 @@ class RawArea {
     @JacksonXmlProperty(localName = "bounds")
     var bounds: BoundingBox = BoundingBox()
 
-    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "node")
     var nodes: MutableList<RawNode> = mutableListOf()
 
-    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "way")
     var ways: MutableList<RawWay> = mutableListOf()
 
-    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "relation")
     var relations: MutableList<RawRelation> = mutableListOf()
 }

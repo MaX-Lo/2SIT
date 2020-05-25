@@ -290,4 +290,15 @@ class Mapper {
         }
     }
 
+    fun exportBuildings() {
+        // Todo implement for building currently just a test with ways
+
+        val osmChange = OsmChange()
+        val modify = Modify()
+        for (way in allWays.entries) {
+            osmChange.modify.ways.add(way.value.toRawWay())
+        }
+        val xmlStr = osmChange.toXMLString()
+    }
+
 }
