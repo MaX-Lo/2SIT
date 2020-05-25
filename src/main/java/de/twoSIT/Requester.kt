@@ -12,7 +12,7 @@ class Requester(private val baseUrl: String) {
         private val logger = getLogger(Requester::class.java)
     }
 
-    fun requestRelation(id: Int, useCache: Boolean = true) : String {
+    fun requestRelation(id: String, useCache: Boolean = true) : String {
         if (useCache) {
             val dirName = responseCacheDir
             File(dirName).mkdir()
@@ -36,18 +36,18 @@ class Requester(private val baseUrl: String) {
         return requestRelation(id)
     }
 
-    private fun requestRelation(id: Int): String {
+    private fun requestRelation(id: String): String {
         val url = "${baseUrl}node/$id"
         return Request.Get(url).execute().returnContent().asString()
     }
 
-    fun requestRelations(ids: Iterable<Int>): String {
+    fun requestRelations(ids: Iterable<String>): String {
         val idString = ids.joinToString(separator = ",") { it -> "$it" }
         val url = "${baseUrl}relations?relations=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
 
-    fun requestNode(id: Int, useCache: Boolean = true): String {
+    fun requestNode(id: String, useCache: Boolean = true): String {
         if (useCache) {
             val dirName = responseCacheDir
             File(dirName).mkdir()
@@ -71,18 +71,18 @@ class Requester(private val baseUrl: String) {
         return requestNode(id)
     }
 
-    private fun requestNode(id: Int): String {
+    private fun requestNode(id: String): String {
         val url = "${baseUrl}node/$id"
         return Request.Get(url).execute().returnContent().asString()
     }
 
-    fun requestNodes(ids: Iterable<Int>): String {
+    fun requestNodes(ids: Iterable<String>): String {
         val idString = ids.joinToString(separator = ",") { it -> "$it" }
         val url = "${baseUrl}nodes?nodes=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
 
-    fun requestWay(id: Int, useCache: Boolean = true): String {
+    fun requestWay(id: String, useCache: Boolean = true): String {
         if (useCache) {
             val dirName = responseCacheDir
             File(dirName).mkdir()
@@ -106,12 +106,12 @@ class Requester(private val baseUrl: String) {
         return requestWay(id)
     }
 
-    private fun requestWay(id: Int): String {
+    private fun requestWay(id: String): String {
         val url = "${baseUrl}way/$id"
         return Request.Get(url).execute().returnContent().asString()
     }
 
-    fun requestWays(ids: Iterable<Int>): String {
+    fun requestWays(ids: Iterable<String>): String {
         val idString = ids.joinToString(separator = ",") { it -> "$it" }
         val url = "${baseUrl}ways?ways=$idString"
         return Request.Get(url).execute().returnContent().asString()

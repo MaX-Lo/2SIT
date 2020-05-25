@@ -18,8 +18,8 @@ fun main() {
     val rawXmlString = requester.requestArea(indoorArea)
     val rawArea = RawArea.fromString(rawXmlString)
 
-    val mapper = Mapper(rawArea)
-    val buildings = mapper.parse()
+    val mapper = Mapper()
+    val buildings = mapper.parseArea(rawArea)
 
     val x = ""
 }

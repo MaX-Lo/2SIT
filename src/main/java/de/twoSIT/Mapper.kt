@@ -4,12 +4,11 @@ import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
 
 
-class Mapper(rawArea: RawArea) {
+class Mapper {
     companion object {
         @JvmStatic
         private val logger = getLogger(Mapper::class.java)
     }
-
 
     private val allWays = mutableMapOf<String, Way>()
     private val allRelations = mutableMapOf<String, Relation>()
@@ -18,18 +17,110 @@ class Mapper(rawArea: RawArea) {
     private val buildings = mutableListOf<Building>()
     private val unparsedBuildings = mutableListOf<Building>()
 
-    private lateinit var building: Building
+    fun parseArea(rawArea: RawArea): List<Building> {
+        // clear and refill maps
+        allNodes.clear()
+        allWays.clear()
+        allRelations.clear()
+        for (rawNode in rawArea.nodes) allNodes[rawNode.id] = Node.fromRaw(rawNode)
+        for (way in rawArea.ways) allWays[way.id] = Way.fromRaw(way, allNodes)
+        for (rawRelation in rawArea.relations) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
 
+        // fetch missing stuff
+        fillMissing()
 
-    init {
-        for (rawNode in rawArea.nodes) allNodes[rawNode.id] = Node.fromRawNode(rawNode)
-        for (way in rawArea.ways) allWays[way.id] =  Way.fromRawWay(way, allNodes)
-        for (rawRelation in rawArea.relations) allRelations[rawRelation.id] = Relation.fromRawRelation(rawRelation)
+        // parse it
+        parseBuildingRel()
+
+        return buildings
     }
 
-    fun parse(): List<Building> {
-        parseBuildingRel()
-        return buildings
+    private fun fillMissing() {
+        val missingStuff = getMissingStuff()
+
+        val missingNodes = missingStuff.first
+        val missingWays = missingStuff.second
+        val missingRelations = missingStuff.third
+
+        val requester = Requester("https://api.openstreetmap.org/api/0.6/")
+        if (missingNodes.isNotEmpty()){
+            logger.info("Fetching ${missingNodes.size} nodes")
+            val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
+            for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
+        }
+        if (missingWays.isNotEmpty()){
+            logger.info("Fetching ${missingWays.size} ways")
+            val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
+            for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
+        }
+        if (missingRelations.isNotEmpty()){
+            logger.info("Fetching ${missingRelations.size} relations")
+            val relationList = RawRelation.multipleFromString(requester.requestNodes(missingRelations))
+            for (rawRelation in relationList) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
+        }
+
+        if (missingNodes.isNotEmpty() || missingWays.isNotEmpty() || missingRelations.isNotEmpty())
+            fillMissing()
+    }
+
+    private fun getMissingStuff(): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
+        val missingNodes = mutableListOf<String>()
+        val missingWays = mutableListOf<String>()
+        val missingRelations = mutableListOf<String>()
+
+        val buildingRelations = getAllBuildingRel()
+        for (buildingRelation in buildingRelations) {
+            val missingStuff = getMissingStuffBuilding(buildingRelation)
+            missingNodes.addAll(missingStuff.first)
+            missingWays.addAll(missingStuff.second)
+            missingRelations.addAll(missingStuff.third)
+        }
+
+        return Triple(missingNodes, missingWays, missingRelations)
+    }
+
+
+    private fun getMissingStuffBuilding(buildingRelation: Relation): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
+        val missingNodes = mutableListOf<String>()
+        val missingWays = mutableListOf<String>()
+        val missingRelations = mutableListOf<String>()
+
+        for (member in buildingRelation.relationMembers) {
+            if (!allRelations.containsKey(member.ref)) {
+                missingRelations.add(member.ref)
+            } else {
+                val floorMissingStuff = getMissingStuffFloor(allRelations[member.ref]!!)
+                missingNodes.addAll(floorMissingStuff.first)
+                missingWays.addAll(floorMissingStuff.second)
+                missingRelations.addAll(floorMissingStuff.third)
+            }
+        }
+        for (member in buildingRelation.nodeMembers) {
+            if (!allNodes.containsKey(member.ref)) missingNodes.add(member.ref)
+        }
+        for (member in buildingRelation.wayMembers) {
+            if (!allNodes.containsKey(member.ref)) missingWays.add(member.ref)
+        }
+
+        return Triple(missingNodes, missingWays, missingRelations)
+    }
+
+    private fun getMissingStuffFloor(floorRelation: Relation): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
+        val missingNodes = mutableListOf<String>()
+        val missingWays = mutableListOf<String>()
+        val missingRelations = mutableListOf<String>()
+
+        for (member in floorRelation.nodeMembers) {
+            if (!allNodes.containsKey(member.ref)) missingNodes.add(member.ref)
+        }
+        for (member in floorRelation.wayMembers) {
+            if (!allWays.containsKey(member.ref)) missingWays.add(member.ref)
+        }
+        for (member in floorRelation.relationMembers) {
+            if (!allRelations.containsKey(member.ref)) missingWays.add(member.ref)
+        }
+
+        return Triple(missingNodes, missingWays, missingRelations)
     }
 
     private fun getAllBuildingRel(): MutableList<Relation> {
@@ -45,7 +136,7 @@ class Mapper(rawArea: RawArea) {
     private fun parseBuildingRel() {
         val buildingRelations = getAllBuildingRel()
         for (relation in buildingRelations) {
-            building = Building(relation.id)
+            val building = Building(relation.id)
 
             for ((tag, value) in relation.additionalTags.entries) {
                 when (tag) {
@@ -73,6 +164,10 @@ class Mapper(rawArea: RawArea) {
             }
 
             for (member in relation.wayMembers) {
+                if (!allWays.containsKey(member.ref)) {
+                    logger.warn("FATAL: Could not find ${member.ref} in allWays... oh nooo")
+                    continue
+                }
                 if (building.mainWay == null) {
                     building.mainWay = allWays[member.ref]
                 } else {
@@ -82,7 +177,7 @@ class Mapper(rawArea: RawArea) {
 
             for (member in relation.relationMembers) {
                 if (allRelations.containsKey(member.ref)) {
-                    parseFloor(allRelations[member.ref]!!)
+                    parseFloor(allRelations[member.ref]!!, building)
                 } else {
                     logger.warn("FATAL: Could not find ${member.ref} in allRelations... oh nooo")
                 }
@@ -97,8 +192,7 @@ class Mapper(rawArea: RawArea) {
 
     }
 
-    private fun parseFloor(relation: Relation) {
-
+    private fun parseFloor(relation: Relation, building: Building) {
         val floor = Floor(relation.id)
 
         // todo floorRef parsing
@@ -118,7 +212,7 @@ class Mapper(rawArea: RawArea) {
             } else if (floor.level == null) {
                 logger.warn("Cannot parse room ${member.ref}: floor has no level")
             } else {
-                parseIndoorObject(allNodes[member.ref]!!, floor.level!!)
+                parseIndoorObject(allNodes[member.ref]!!, floor.level!!, building)
             }
         }
 
@@ -129,10 +223,10 @@ class Mapper(rawArea: RawArea) {
                 logger.warn("Cannot parse room ${member.ref}: floor has no level")
             } else {
                 val way = allWays[member.ref]!!
-                if ("level:usage" in way.additionalTags.keys){
+                if ("level:usage" in way.additionalTags.keys) {
                     floor.usages[way.additionalTags["level:usage"]!!] = way
                 } else {
-                    parseRoom(way, floor.level!!)
+                    parseRoom(way, floor.level!!, building)
                 }
             }
         }
@@ -168,7 +262,7 @@ class Mapper(rawArea: RawArea) {
         }
     }
 
-    private fun parseIndoorObject(node: Node, level: Int) {
+    private fun parseIndoorObject(node: Node, level: Int, building: Building) {
         val indoorObject = IndoorObject(node.id)
         indoorObject.level = level
         indoorObject.additionalTags.putAll(node.additionalTags)
@@ -176,12 +270,12 @@ class Mapper(rawArea: RawArea) {
         if (indoorObject.check()) building.indoorObjects.add(indoorObject)
     }
 
-    private fun parseLevelConnections(way: Way) {
+    private fun parseLevelConnections(way: Way, building: Building) {
         val levelConnection = LevelConnection(way.id)
         if (levelConnection.check()) building.connections.add(levelConnection)
     }
 
-    private fun parseRoom(way: Way, level: Int) {
+    private fun parseRoom(way: Way, level: Int, building: Building) {
         val room = Room(way.id)
         room.level = level
 
@@ -197,7 +291,7 @@ class Mapper(rawArea: RawArea) {
                         "room" -> room.indoorTag = IndoorTag.ROOM
                         "hall" -> room.indoorTag = IndoorTag.AREA
                         "verticalpassage" -> {
-                            parseLevelConnections(way)
+                            parseLevelConnections(way, building)
                             return
                         }
                         "shell" -> {

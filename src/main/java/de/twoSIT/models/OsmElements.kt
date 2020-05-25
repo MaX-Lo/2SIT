@@ -35,7 +35,7 @@ abstract class AbstractElement(var id: String? = null) {
 class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
 
     companion object {
-        fun fromRawNode(rawNode: RawNode): Node {
+        fun fromRaw(rawNode: RawNode): Node {
             val node = Node(rawNode.id, rawNode.lat, rawNode.lon)
             node.mapCommonTags(rawNode)
             for (tag in rawNode.tags){
@@ -65,7 +65,7 @@ class Way(id: String? = null): AbstractElement(id) {
     val nodes = mutableMapOf<String, Node>()
 
     companion object {
-        fun fromRawWay(rawWay: RawWay, nodes: MutableMap<String, Node>): Way {
+        fun fromRaw(rawWay: RawWay, nodes: MutableMap<String, Node>): Way {
             val way = Way(rawWay.id)
             for (nodeRef in rawWay.nds) {
                 way.nodes[nodeRef.ref] = nodes[nodeRef.ref]!!
@@ -106,7 +106,7 @@ class Relation(id: String? = null): AbstractElement(id) {
     val relationMembers = mutableListOf<Member>()
 
     companion object {
-        fun fromRawRelation(rawRelation: RawRelation): Relation {
+        fun fromRaw(rawRelation: RawRelation): Relation {
             val relation = Relation(rawRelation.id)
             for (rawMember in rawRelation.members) {
                 val member = Member(rawMember.ref, rawMember.role)
