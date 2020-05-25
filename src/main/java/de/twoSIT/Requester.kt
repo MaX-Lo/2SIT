@@ -1,8 +1,6 @@
 package de.twoSIT
 
-import de.twoSIT.const.responseCacheDir
-import de.twoSIT.const.areaCacheFile
-import de.twoSIT.const.wayCacheFile
+import de.twoSIT.const.*
 import de.twoSIT.models.Area
 import de.twoSIT.util.getLogger
 import org.apache.http.client.fluent.Request
@@ -14,6 +12,76 @@ class Requester(private val baseUrl: String) {
         private val logger = getLogger(Requester::class.java)
     }
 
+    fun requestRelation(id: Int, useCache: Boolean = true) : String {
+        if (useCache) {
+            val dirName = responseCacheDir
+            File(dirName).mkdir()
+            val cached = File("$dirName/${relationCacheFile(id)}")
+
+            if (cached.exists()) {
+                logger.debug("Loaded cached relation $cached")
+                return cached.readText()
+            }
+
+            val rawXml = requestNode(id)
+            cached.printWriter().use { out ->
+                val lines = rawXml.split("\n")
+                for (line in lines) {
+                    out.println(line)
+                }
+            }
+            logger.debug("Saved relation in $cached")
+            return rawXml
+        }
+        return requestRelation(id)
+    }
+
+    private fun requestRelation(id: Int): String {
+        val url = "${baseUrl}node/$id"
+        return Request.Get(url).execute().returnContent().asString()
+    }
+
+    fun requestRelations(ids: Iterable<Int>): String {
+        val idString = ids.joinToString(separator = ",") { it -> "$it" }
+        val url = "${baseUrl}relations?relations=$idString"
+        return Request.Get(url).execute().returnContent().asString()
+    }
+
+    fun requestNode(id: Int, useCache: Boolean = true): String {
+        if (useCache) {
+            val dirName = responseCacheDir
+            File(dirName).mkdir()
+            val cached = File("$dirName/${nodeCacheFile(id)}")
+
+            if (cached.exists()) {
+                logger.debug("Loaded cached node $cached")
+                return cached.readText()
+            }
+
+            val rawXml = requestNode(id)
+            cached.printWriter().use { out ->
+                val lines = rawXml.split("\n")
+                for (line in lines) {
+                    out.println(line)
+                }
+            }
+            logger.debug("Saved node in $cached")
+            return rawXml
+        }
+        return requestNode(id)
+    }
+
+    private fun requestNode(id: Int): String {
+        val url = "${baseUrl}node/$id"
+        return Request.Get(url).execute().returnContent().asString()
+    }
+
+    fun requestNodes(ids: Iterable<Int>): String {
+        val idString = ids.joinToString(separator = ",") { it -> "$it" }
+        val url = "${baseUrl}nodes?nodes=$idString"
+        return Request.Get(url).execute().returnContent().asString()
+    }
+
     fun requestWay(id: Int, useCache: Boolean = true): String {
         if (useCache) {
             val dirName = responseCacheDir
@@ -21,7 +89,7 @@ class Requester(private val baseUrl: String) {
             val cached = File("$dirName/${wayCacheFile(id)}")
 
             if (cached.exists()) {
-                logger.debug("Loaded cached area $cached")
+                logger.debug("Loaded cached way $cached")
                 return cached.readText()
             }
 

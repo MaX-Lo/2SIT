@@ -2,6 +2,7 @@ package de.twoSIT
 
 import de.twoSIT.models.Area
 import de.twoSIT.models.RawArea
+import de.twoSIT.models.RawNode
 import de.twoSIT.models.RawWay
 
 
@@ -14,7 +15,7 @@ fun main() {
     // val requester = Requester("http://141.76.16.34:8084/api/0.6/")  // uni-server
     val requester = Requester("https://api.openstreetmap.org/api/0.6/")
 
-    val rawXmlString = requester.requestArea(indoorArea, false)
+    val rawXmlString = requester.requestArea(indoorArea)
     val rawArea = RawArea.fromString(rawXmlString)
 
     val mapper = Mapper(rawArea)

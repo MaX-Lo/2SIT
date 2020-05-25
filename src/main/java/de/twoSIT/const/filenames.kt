@@ -9,7 +9,12 @@ fun areaCacheFile(area: Area) : String{
 fun wayCacheFile(id: Int) : String{
     return "way_${id}.xml"
 }
-
+fun nodeCacheFile(id: Int) : String{
+    return "node_${id}.xml"
+}
+fun relationCacheFile(id: Int) : String{
+    return "node_${id}.xml"
+}
 
 const val logDir = "logs"
 const val defaultLogFile = "2sit.log"

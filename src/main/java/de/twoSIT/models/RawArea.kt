@@ -5,11 +5,9 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
-import java.io.FileInputStream
 import java.io.StringReader
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
-import javax.xml.transform.Source
 
 
 class RawMember {
@@ -64,6 +62,46 @@ abstract class RawAbstractElement {
 
 
 class RawRelation : RawAbstractElement() {
+    companion object {
+        @JvmStatic
+        fun fromString(rawXmlString: String): RawRelation {
+            // todo add some fault tolerance here too
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+            sr.next()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+            return xmlMapper.readValue(sr, RawRelation::class.java)
+        }
+
+        @JvmStatic
+        fun multipleFromString(rawXmlString: String): MutableList<RawRelation> {
+            val resultList = mutableListOf<RawRelation>()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+
+            try {
+                while (sr.hasNext()) {
+                    sr.next()
+                    resultList.add(xmlMapper.readValue(sr, RawRelation::class.java))
+                }
+            } catch (e: NoSuchElementException) {
+                // stupid fucking xml parsing shit fuuuuu
+            }
+
+            return resultList
+        }
+    }
+
     @JacksonXmlProperty(localName = "member")
     var members: MutableList<RawMember> = mutableListOf()
 }
@@ -98,11 +136,11 @@ class RawWay : RawAbstractElement() {
             sr.next()
 
             try {
-                while (sr.hasNext()){
+                while (sr.hasNext()) {
                     sr.next()
                     resultList.add(xmlMapper.readValue(sr, RawWay::class.java))
                 }
-            } catch (e: NoSuchElementException){
+            } catch (e: NoSuchElementException) {
                 // stupid fucking xml parsing shit fuuuuu
             }
 
@@ -114,8 +152,48 @@ class RawWay : RawAbstractElement() {
     var nds: MutableList<NodeReference> = mutableListOf()
 }
 
-
+@JacksonXmlRootElement(localName = "node")
 class RawNode : RawAbstractElement() {
+    companion object {
+        @JvmStatic
+        fun fromString(rawXmlString: String): RawNode {
+            // todo add some fault tolerance here too
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+            sr.next()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+            return xmlMapper.readValue(sr, RawNode::class.java)
+        }
+
+        @JvmStatic
+        fun multipleFromString(rawXmlString: String): MutableList<RawNode> {
+            val resultList = mutableListOf<RawNode>()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+
+            try {
+                while (sr.hasNext()) {
+                    sr.next()
+                    resultList.add(xmlMapper.readValue(sr, RawNode::class.java))
+                }
+            } catch (e: NoSuchElementException) {
+                // stupid fucking xml parsing shit fuuuuu
+            }
+
+            return resultList
+        }
+    }
+
     @JacksonXmlProperty(isAttribute = true)
     var lat: Float = 0f
 
