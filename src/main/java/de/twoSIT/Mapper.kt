@@ -43,15 +43,26 @@ class Mapper {
         val missingRelations = missingStuff.third
 
         val requester = Requester("https://api.openstreetmap.org/api/0.6/")
+        if (missingWays.isNotEmpty()){
+            logger.info("Fetching ${missingWays.size} ways")
+            val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
+            val missingNodes = mutableListOf<String>()
+            for (rawWay in wayList){
+                for (nodeRef in rawWay.nds){
+                    if (!allNodes.containsKey(nodeRef.ref)) missingNodes.add(nodeRef.ref)
+                }
+            }
+            if (missingNodes.isNotEmpty()){
+                logger.info("Fetching ${missingNodes.size} nodes")
+                val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
+                for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
+            }
+            for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
+        }
         if (missingNodes.isNotEmpty()){
             logger.info("Fetching ${missingNodes.size} nodes")
             val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
             for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
-        }
-        if (missingWays.isNotEmpty()){
-            logger.info("Fetching ${missingWays.size} ways")
-            val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
-            for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
         }
         if (missingRelations.isNotEmpty()){
             logger.info("Fetching ${missingRelations.size} relations")
@@ -59,8 +70,6 @@ class Mapper {
             for (rawRelation in relationList) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
         }
 
-        if (missingNodes.isNotEmpty() || missingWays.isNotEmpty() || missingRelations.isNotEmpty())
-            fillMissing()
     }
 
     private fun getMissingStuff(): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
