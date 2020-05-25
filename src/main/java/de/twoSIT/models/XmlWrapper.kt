@@ -34,6 +34,46 @@ class Tag(
 )
 
 abstract class RawAbstractElement {
+
+    companion object {
+        @JvmStatic
+        protected fun fromString(rawXmlString: String, cls: Class<out RawAbstractElement>): RawAbstractElement {
+            // todo add some fault tolerance here too
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+            sr.next()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+            return xmlMapper.readValue(sr, cls)
+        }
+
+        @JvmStatic
+        protected fun multipleFromString(rawXmlString: String, cls: Class<out RawAbstractElement>): MutableList<RawAbstractElement> {
+            val resultList = mutableListOf<RawAbstractElement>()
+
+            val xmlMapper = XmlMapper()
+            xmlMapper.setDefaultUseWrapper(false)
+            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            val f = XMLInputFactory.newFactory()
+            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
+            sr.next()
+
+            try {
+                while (sr.hasNext()) {
+                    sr.next()
+                    resultList.add(xmlMapper.readValue(sr, cls))
+                }
+            } catch (e: NoSuchElementException) {
+                // stupid fucking xml parsing shit fuuuuu
+            }
+
+            return resultList
+    }
+
     @JacksonXmlProperty(isAttribute = true)
     var id: String = "not available"
 
@@ -64,40 +104,12 @@ class RawRelation : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawRelation {
-            // todo add some fault tolerance here too
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-            sr.next()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-
-            return xmlMapper.readValue(sr, RawRelation::class.java)
+            return RawAbstractElement.fromString(rawXmlString, RawRelation::class.java) as RawRelation
         }
 
         @JvmStatic
-        fun multipleFromString(rawXmlString: String): MutableList<RawRelation> {
-            val resultList = mutableListOf<RawRelation>()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-
-            try {
-                while (sr.hasNext()) {
-                    sr.next()
-                    resultList.add(xmlMapper.readValue(sr, RawRelation::class.java))
-                }
-            } catch (e: NoSuchElementException) {
-                // stupid fucking xml parsing shit fuuuuu
-            }
-
-            return resultList
+        fun multipleFromString(rawXmlString: String): List<RawRelation> {
+            return RawAbstractElement.multipleFromString(rawXmlString, RawRelation::class.java).filterIsInstance<RawRelation>()
         }
     }
 
@@ -110,40 +122,12 @@ class RawWay : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawWay {
-            // todo add some fault tolerance here too
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-            sr.next()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-
-            return xmlMapper.readValue(sr, RawWay::class.java)
+            return RawAbstractElement.fromString(rawXmlString, RawWay::class.java) as RawWay
         }
 
         @JvmStatic
-        fun multipleFromString(rawXmlString: String): MutableList<RawWay> {
-            val resultList = mutableListOf<RawWay>()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-
-            try {
-                while (sr.hasNext()) {
-                    sr.next()
-                    resultList.add(xmlMapper.readValue(sr, RawWay::class.java))
-                }
-            } catch (e: NoSuchElementException) {
-                // stupid fucking xml parsing shit fuuuuu
-            }
-
-            return resultList
+        fun multipleFromString(rawXmlString: String): List<RawWay> {
+            return RawAbstractElement.multipleFromString(rawXmlString, RawWay::class.java).filterIsInstance<RawWay>()
         }
     }
 
@@ -156,40 +140,12 @@ class RawNode : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawNode {
-            // todo add some fault tolerance here too
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-            sr.next()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-
-            return xmlMapper.readValue(sr, RawNode::class.java)
+            return RawAbstractElement.fromString(rawXmlString, RawNode::class.java) as RawNode
         }
 
         @JvmStatic
-        fun multipleFromString(rawXmlString: String): MutableList<RawNode> {
-            val resultList = mutableListOf<RawNode>()
-
-            val xmlMapper = XmlMapper()
-            xmlMapper.setDefaultUseWrapper(false)
-            xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            val f = XMLInputFactory.newFactory()
-            val sr: XMLStreamReader = f.createXMLStreamReader(StringReader(rawXmlString))
-            sr.next()
-
-            try {
-                while (sr.hasNext()) {
-                    sr.next()
-                    resultList.add(xmlMapper.readValue(sr, RawNode::class.java))
-                }
-            } catch (e: NoSuchElementException) {
-                // stupid fucking xml parsing shit fuuuuu
-            }
-
-            return resultList
+        fun multipleFromString(rawXmlString: String): List<RawNode> {
+            return RawAbstractElement.multipleFromString(rawXmlString, RawNode::class.java).filterIsInstance<RawNode>()
         }
     }
 
