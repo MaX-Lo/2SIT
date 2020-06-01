@@ -20,7 +20,7 @@ class Converter {
             val level = room.level ?: continue
 
             val tmp = subsectionMap.getValue(level)
-            for (nodeInd in 0 until room.nodes.size) {
+            for (nodeInd in 0 until room.nodes.size-1) {
                 tmp.add(SubSection(room.nodes[nodeInd], room.nodes[nodeInd+1]))
             }
             subsectionMap[level] = tmp
@@ -30,6 +30,7 @@ class Converter {
         for ((level, subsections) in subsectionMap){
             for (subsection1 in subsections){
                 for (subsection2 in subsections){
+                    if (subsection1 === subsection2) continue
                     if (subsection1 == subsection2){
                         twinSubSections.add(Pair(subsection1, subsection2))
                         break

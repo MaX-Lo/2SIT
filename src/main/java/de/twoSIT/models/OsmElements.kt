@@ -38,7 +38,7 @@ abstract class AbstractElement(var id: String? = null) {
 
 class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
 
-    val proximityThreshold = 0.2
+    val proximityThreshold = 0.000030 // todo this is not stable, it is coordinate based not distance
 
     companion object {
         fun fromRaw(rawNode: RawNode): Node {
