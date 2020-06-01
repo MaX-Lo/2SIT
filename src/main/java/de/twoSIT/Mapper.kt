@@ -249,8 +249,7 @@ class Mapper {
     }
 
     private fun parseIndoorObject(node: Node, level: Int, building: Building) {
-        val indoorObject = IndoorObject(node.id)
-        indoorObject.level = level
+        val indoorObject = IndoorObject(node.id, node.latitude, node.longitude, level)
         indoorObject.additionalTags.putAll(node.additionalTags)
 
         if (indoorObject.check()) building.indoorObjects.add(indoorObject)
@@ -356,6 +355,7 @@ class Mapper {
          *   2 - create: set if the element got newly created
          *   3 - delete: set if the element got removed since it isn't needed anymore
          **/
+
         val osmChange = OsmChange()
         val modify = Modify()
         val create = Create()
