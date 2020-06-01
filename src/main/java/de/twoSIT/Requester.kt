@@ -7,12 +7,28 @@ import de.twoSIT.util.getLogger
 import org.apache.http.client.fluent.Request
 import java.io.File
 
+/**
+ * Handles all the requests to a OSM server
+ *
+ * This is a Singleton
+ *
+ * @param baseUrl The url of the server to use. This is useful to quickly change the server or the api level.
+ * Example: "https://api.openstreetmap.org/api/0.6/"
+ */
 class Requester private constructor(private val baseUrl: String) {
     companion object : SingletonHolder<Requester, String>(::Requester) {
         @JvmStatic
         private val logger = getLogger(Requester::class.java)
     }
 
+    /**
+     * Fetches a single relation based on the id
+     *
+     * @param id the id of the relation to fetch
+     * @param useCache if set to true, it will persistently cache the response. If a cache file for this request exist,
+     * it will be loaded, else it will fetch the request and save the file for later usage
+     * @return XML-String containing the content
+     */
     fun requestRelation(id: String, useCache: Boolean = true): String {
         if (useCache) {
             val dirName = responseCacheDir
@@ -24,7 +40,7 @@ class Requester private constructor(private val baseUrl: String) {
                 return cached.readText()
             }
 
-            val rawXml = requestNode(id)
+            val rawXml = requestRelation(id)
             cached.printWriter().use { out ->
                 val lines = rawXml.split("\n")
                 for (line in lines) {
@@ -43,7 +59,7 @@ class Requester private constructor(private val baseUrl: String) {
     }
 
     fun requestRelations(ids: Iterable<String>): String {
-        val idString = ids.joinToString(separator = ",") { it -> "$it" }
+        val idString = ids.joinToString(separator = ",") { it -> it }
         val url = "${baseUrl}relations?relations=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
@@ -117,7 +133,6 @@ class Requester private constructor(private val baseUrl: String) {
         val url = "${baseUrl}ways?ways=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
-
 
     fun requestAreas(areas: Iterable<Area>, useCache: Boolean = true): MutableMap<Area, String> {
         val map = mutableMapOf<Area, String>()

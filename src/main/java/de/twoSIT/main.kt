@@ -10,10 +10,12 @@ import de.twoSIT.models.RawWay
 val indoorArea = Area(49.41689, 8.67180, 49.41969, 8.67695)
 val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 
+// server addresses to easy switch.
+const val uniServer = "http://141.76.16.34:8084/api/0.6/"
+const val officialServer = "https://api.openstreetmap.org/api/0.6/"
 
 fun main() {
-    // val requester = Requester("http://141.76.16.34:8084/api/0.6/")  // uni-server
-    val requester = Requester.getInstance("https://api.openstreetmap.org/api/0.6/")
+    val requester = Requester.getInstance(officialServer)
 
     val rawXmlString = requester.requestArea(indoorArea)
     val rawArea = RawArea.fromString(rawXmlString)
@@ -21,5 +23,7 @@ fun main() {
     val mapper = Mapper()
     val buildings = mapper.parseArea(rawArea)
 
+    val converter = Converter()
+    val sitBuildings = converter.convertBuildings(buildings)
     val x = ""
 }

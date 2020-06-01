@@ -34,6 +34,8 @@ abstract class AbstractElement(var id: String? = null) {
 
 class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
 
+    val proximityThreshold = 0.2
+
     companion object {
         fun fromRaw(rawNode: RawNode): Node {
             val node = Node(rawNode.id, rawNode.lat, rawNode.lon)
@@ -43,6 +45,12 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
             }
             return node
         }
+    }
+
+    fun inProximity(node: Node): Boolean {
+        val latProximity = (latitude - proximityThreshold < node.latitude && node.latitude < latitude + proximityThreshold)
+        val lonProximity = (longitude - proximityThreshold < node.longitude && node.longitude < longitude + proximityThreshold)
+        return latProximity && lonProximity
     }
 
     fun toRawNode(): RawNode {
@@ -61,14 +69,14 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
     }
 }
 
-class Way(id: String? = null): AbstractElement(id) {
-    val nodes = mutableMapOf<String, Node>()
+open class Way(id: String? = null): AbstractElement(id) {
+    val nodes = mutableListOf<Node>()
 
     companion object {
         fun fromRaw(rawWay: RawWay, nodes: MutableMap<String, Node>): Way {
             val way = Way(rawWay.id)
             for (nodeRef in rawWay.nds) {
-                way.nodes[nodeRef.ref] = nodes[nodeRef.ref]!!
+                way.nodes.add(nodes[nodeRef.ref]!!)
             }
             way.mapCommonTags(rawWay)
             for (tag in rawWay.tags){
@@ -78,11 +86,17 @@ class Way(id: String? = null): AbstractElement(id) {
         }
     }
 
+    fun compareWay(way: Way) {
+        for (node in nodes){
+
+        }
+    }
+
     fun toRawWay(): RawWay {
         val rawWay = RawWay()
         enrichWithCommonTags(rawWay)
         rawWay.nds = mutableListOf()
-        for (node in nodes.values) {
+        for (node in nodes) {
             rawWay.nds.add(node.toNodeReference())
         }
         return rawWay

@@ -11,12 +11,10 @@ enum class IndoorTag {
     ROOM, AREA, WALL, CORRIDOR
 }
 
-
-
 class LevelConnection(id: String? = null) : AbstractElement(id) {
     val levels = mutableListOf<Int>()
     var indoorTag: IndoorTag? = null
-    val doors = mutableListOf<RawNode>()
+    val doors = mutableListOf<Node>()
     var levelConnectionType: LevelConnectionType? = null
 
     fun check(): Boolean {
@@ -25,15 +23,15 @@ class LevelConnection(id: String? = null) : AbstractElement(id) {
             return false
         }
         if (indoorTag == null) {
-            Building.logger.info("Could not parse levelConnection-way $id: no indoor tag")
+            Building.logger.info("levelConnection-way $id: no indoor tag")
             return true
         }
         if (levelConnectionType == null) {
-            Building.logger.warn("Could not parse levelConnection-way $id: no levelConnectionType")
+            Building.logger.warn("levelConnection-way $id: no levelConnectionType")
             return true
         }
         if (doors.isEmpty()) {
-            Building.logger.info("Could not parse levelConnection-way $id: no doors")
+            Building.logger.info("levelConnection-way $id: no doors")
             return true
         }
         return true
@@ -41,12 +39,11 @@ class LevelConnection(id: String? = null) : AbstractElement(id) {
 }
 
 
-class Room(id: String? = null) : AbstractElement(id) {
+class Room(id: String? = null) : Way(id) {
     var level: Int? = null
     var indoorTag: IndoorTag? = null
 
     var outline: Way? = null
-    val nodes = mutableListOf<RawNode>()
     var height: Float? = null
     var name: String? = null
     var ref: String? = null
@@ -61,7 +58,7 @@ class Room(id: String? = null) : AbstractElement(id) {
             return false
         }
         if (indoorTag == null) {
-            Building.logger.info("Could not parse Room-way $id: no indoor tag")
+            Building.logger.info("Room-way $id: no indoor tag")
             return true
         }
         return true
@@ -139,11 +136,11 @@ class Building(id: String? = null): AbstractElement(id) {
             return false
         }
         if (outline == null) {
-            logger.info("Could not parse building-relation $id: no outline")
+            logger.info("building-relation $id: no outline")
             return true
         }
         if (floors.size == 0) {
-            logger.info("Could not parse building-relation ${id}: no floors")
+            logger.info("building-relation ${id}: no floors")
             return true
         }
         return true
