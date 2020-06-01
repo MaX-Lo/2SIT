@@ -2,8 +2,6 @@ package de.twoSIT
 
 import de.twoSIT.models.Area
 import de.twoSIT.models.RawArea
-import de.twoSIT.models.RawNode
-import de.twoSIT.models.RawWay
 
 
 // bounding box examples for a buildings mapped as IndoorOSM and SIT
@@ -25,5 +23,6 @@ fun main() {
 
     val converter = Converter()
     val sitBuildings = converter.convertBuildings(buildings)
+    mapper.exportBuildings()
     val x = ""
 }
