@@ -152,10 +152,10 @@ class RawNode : RawAbstractElement() {
     }
 
     @JacksonXmlProperty(isAttribute = true)
-    var lat: Float = 0f
+    var lat: Double = 0.0
 
     @JacksonXmlProperty(isAttribute = true)
-    var lon: Float = 0f
+    var lon: Double = 0.0
 }
 
 class BoundingBox {

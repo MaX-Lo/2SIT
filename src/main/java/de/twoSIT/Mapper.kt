@@ -265,6 +265,7 @@ class Mapper {
         val room = Room(way.id)
         room.level = level
         room.nodes.addAll(way.nodes)
+        room.subsections.addAll(way.subsections)
 
         for ((key, value) in way.additionalTags.entries) {
             when (key) {
@@ -285,12 +286,13 @@ class Mapper {
                             room.outline = way
                             return
                         }
-                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
+                        else -> Mapper.logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
                     }
                 }
                 else -> room.additionalTags[key] = value
             }
         }
+
         if (room.check()) {
             building.rooms.add(room)
         }

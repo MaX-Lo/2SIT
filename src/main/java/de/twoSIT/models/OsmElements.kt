@@ -1,5 +1,7 @@
 package de.twoSIT.models
 
+import Coordinate
+import GeoDistance
 import com.google.gson.Gson
 import de.twoSIT.util.getLogger
 
@@ -36,9 +38,9 @@ abstract class AbstractElement(var id: String? = null) {
     }
 }
 
-class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
+class Node(id: String? = null, val latitude: Double, val longitude: Double): AbstractElement(id), Comparable<Node> {
 
-    val proximityThreshold = 0.000030 // todo this is not stable, it is coordinate based not distance
+    val proximityThreshold = 0.2 // meters
 
     companion object {
         fun fromRaw(rawNode: RawNode): Node {
@@ -51,10 +53,18 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
         }
     }
 
-    fun inProximity(node: Node): Boolean {
-        val latProximity = (latitude - proximityThreshold < node.latitude && node.latitude < latitude + proximityThreshold)
-        val lonProximity = (longitude - proximityThreshold < node.longitude && node.longitude < longitude + proximityThreshold)
-        return latProximity && lonProximity
+    override fun compareTo(other: Node): Int {
+        if (id!! < other.id!!) return -1
+        if (id!! > other.id!!) return 1
+        return 0
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is Node){
+            val distance = GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
+            return distance < proximityThreshold
+        }
+        return super.equals(other)
     }
 
     fun toRawNode(): RawNode {
@@ -80,6 +90,7 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
 
 open class Way(id: String? = null): AbstractElement(id) {
     val nodes = mutableListOf<Node>()
+    val subsections = mutableListOf<SubSection>()
 
     companion object {
         fun fromRaw(rawWay: RawWay, nodes: MutableMap<String, Node>): Way {
@@ -87,10 +98,15 @@ open class Way(id: String? = null): AbstractElement(id) {
             for (nodeRef in rawWay.nds) {
                 way.nodes.add(nodes[nodeRef.ref]!!)
             }
+            for (nodeInd in 0 until way.nodes.size-1) {
+                way.subsections.add(SubSection(way.nodes[nodeInd], way.nodes[nodeInd+1]))
+            }
             way.mapCommonTags(rawWay)
             for (tag in rawWay.tags){
                 way.additionalTags[tag.k] = tag.v
             }
+
+
             return way
         }
     }

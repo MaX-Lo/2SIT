@@ -1,5 +1,6 @@
 package de.twoSIT.models
 
+import de.twoSIT.Mapper
 import de.twoSIT.util.getLogger
 
 enum class LevelConnectionType {
