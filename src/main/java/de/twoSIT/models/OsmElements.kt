@@ -36,7 +36,7 @@ abstract class AbstractElement(var id: String? = null) {
     }
 }
 
-class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
+open class Node(id: String? = null, val latitude: Float, val longitude: Float): AbstractElement(id) {
 
     val proximityThreshold = 0.000030 // todo this is not stable, it is coordinate based not distance
 
@@ -65,11 +65,15 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
         return rawNode
     }
 
-    fun toNodeReference(): NodeReference {
-        val nodeRef = NodeReference()
+    fun toNodeReference(): RawNodeReference {
+        val nodeRef = RawNodeReference()
         assert(id != null) { "Conversion to NodeReference impossible, id is missing" }
         nodeRef.ref = this.id!!
         return nodeRef
+    }
+
+    fun toMember(): Member {
+        return Member(id!!, "")
     }
 
     fun deepCopy(): Node {
@@ -95,12 +99,6 @@ open class Way(id: String? = null): AbstractElement(id) {
         }
     }
 
-    fun compareWay(way: Way) {
-        for (node in nodes){
-
-        }
-    }
-
     fun toRawWay(): RawWay {
         val rawWay = RawWay()
         enrichWithCommonTags(rawWay)
@@ -114,6 +112,10 @@ open class Way(id: String? = null): AbstractElement(id) {
     fun deepCopy(): Way {
         val JSON = Gson().toJson(this)
         return Gson().fromJson(JSON, Way::class.java)
+    }
+
+    fun toMember(): Member {
+        return Member(id!!, "")
     }
 }
 
@@ -129,9 +131,9 @@ data class Member(val ref: String, val role: String) {
 }
 
 class Relation(id: String? = null): AbstractElement(id) {
-    val nodeMembers = mutableListOf<Member>()
-    val wayMembers = mutableListOf<Member>()
-    val relationMembers = mutableListOf<Member>()
+    var nodeMembers = mutableListOf<Member>()
+    var wayMembers = mutableListOf<Member>()
+    var relationMembers = mutableListOf<Member>()
 
     companion object {
         fun fromRaw(rawRelation: RawRelation): Relation {

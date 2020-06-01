@@ -20,7 +20,7 @@ class Converter {
             val level = room.level ?: continue
 
             val tmp = subsectionMap.getValue(level)
-            for (nodeInd in 0 until room.nodes.size-1) {
+            for (nodeInd in 0 until room.nodes.size - 1) {
                 tmp.add(SubSection(room.nodes[nodeInd], room.nodes[nodeInd+1]))
             }
             subsectionMap[level] = tmp

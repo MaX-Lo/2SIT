@@ -2,7 +2,6 @@ package de.twoSIT.models
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import java.io.StringReader
@@ -21,7 +20,7 @@ class RawMember {
     var role: String = "not available"
 }
 
-class NodeReference {
+class RawNodeReference {
     @JacksonXmlProperty(isAttribute = true)
     var ref: String = "not available"
 }
@@ -134,7 +133,7 @@ class RawWay : RawAbstractElement() {
     }
 
     @JacksonXmlProperty(localName = "nd")
-    var nds: MutableList<NodeReference> = mutableListOf()
+    var nds: MutableList<RawNodeReference> = mutableListOf()
 }
 
 @JacksonXmlRootElement(localName = "node")

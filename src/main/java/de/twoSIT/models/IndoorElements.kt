@@ -62,14 +62,26 @@ class Room(id: String? = null) : Way(id) {
         }
         return true
     }
+
+    fun toWay(): Way {
+        val way = Way(id)
+        way.additionalTags = additionalTags
+        way.additionalTags["level"] = level.toString()
+        if (indoorTag != null) way.additionalTags["indoorTag"] = indoorTag.toString().toLowerCase()
+        if (height != null) way.additionalTags["height"] = height.toString()
+        if (name != null) way.additionalTags["name"] = name!!
+        if (ref != null) way.additionalTags["ref"] = ref!!
+        return way
+    }
 }
 
 
-class Floor(id: String? = null) : AbstractElement(id) {
+class Floor(id: String? = null) : Way(id) {
     var level: Int? = null
     var height: Float? = null
     var ref: String? = null
     var name: String? = null
+    // Todo should be part of building root relation
     val usages = mutableMapOf<String, Way>()
 
     fun check(): Boolean {
@@ -83,10 +95,19 @@ class Floor(id: String? = null) : AbstractElement(id) {
         }
         return true
     }
+
+    fun toWay(): Way {
+        var way = Way(id)
+        way.additionalTags = additionalTags
+        if (level != null) way.additionalTags["level"] = level.toString()
+        if (height != null) way.additionalTags["height"] = height.toString()
+        if (ref != null) way.additionalTags["ref"] = ref!!
+        if (name != null) way.additionalTags["name"] = name!!
+        return way
+    }
 }
 
-class IndoorObject(id: String? = null) : AbstractElement(id) {
-    var level: Int? = null
+class IndoorObject(id: String? = null, latitude: Float, longitude: Float, val level: Int?) : Node(id, latitude, longitude) {
 
     fun check(): Boolean {
         if (id == null) {
@@ -99,6 +120,13 @@ class IndoorObject(id: String? = null) : AbstractElement(id) {
         }
         return true
     }
+
+    fun toNode(): Node {
+        val node = Node(id, latitude, longitude)
+        node.additionalTags = additionalTags
+        node.additionalTags["level"] = level.toString()
+        return node
+    }
 }
 
 class Building(id: String? = null): AbstractElement(id) {
@@ -109,16 +137,18 @@ class Building(id: String? = null): AbstractElement(id) {
 
     var minLevel: Int? = null
     var maxLevel: Int? = null
+    var height: Float? = null
+    var name: String? = null
+
+    val indoorObjects = mutableListOf<IndoorObject>()
+    val rooms = mutableListOf<Room>()
     var floors = mutableListOf<Floor>()
     val connections = mutableListOf<LevelConnection>()
     var outline: Way? = null
-    val rooms = mutableListOf<Room>()
-    val indoorObjects = mutableListOf<IndoorObject>()
 
     var innerline: Way? = null
     var mainWay: Way? = null
-    var height: Float? = null
-    var name: String? = null
+
     val nonExistingLevels: MutableList<Int> = mutableListOf()
 
     // used to create the diff for later export
@@ -148,5 +178,21 @@ class Building(id: String? = null): AbstractElement(id) {
             return true
         }
         return true
+    }
+
+    fun toRelation(): Relation {
+        val relation = Relation(id)
+        relation.additionalTags = additionalTags
+        if (minLevel != null) relation.additionalTags["minLevel"] = minLevel.toString()
+        if (maxLevel != null) relation.additionalTags["maxLevel"] = maxLevel.toString()
+        if (height != null) relation.additionalTags["height"] = height.toString()
+        if (name != null) relation.additionalTags["name"] = name!!
+
+        val nodeMembers = indoorObjects.map { it.toMember() }
+        val wayMembers = rooms.map { it.toMember() } + floors.map { it.toMember() }
+        relation.nodeMembers = nodeMembers.toMutableList()
+        relation.wayMembers = wayMembers.toMutableList()
+
+        return relation
     }
 }
