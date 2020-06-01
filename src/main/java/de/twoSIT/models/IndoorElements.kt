@@ -2,7 +2,6 @@ package de.twoSIT.models
 
 import de.twoSIT.util.getLogger
 
-
 enum class LevelConnectionType {
     STAIRS, CONVEYOR, ELEVATOR
 }
@@ -125,6 +124,11 @@ class Building(id: String? = null): AbstractElement(id) {
     var name: String? = null
     val nonExistingLevels: MutableList<Int> = mutableListOf()
 
+    // used to create the diff for later export
+    var originalNodes = listOf<Node>()
+    var originalWays = listOf<Way>()
+    var originalRelations = listOf<Relation>()
+
     fun check(): Boolean {
         if (id == null) {
             logger.warn("Could not parse building-relation: no id")
@@ -147,9 +151,5 @@ class Building(id: String? = null): AbstractElement(id) {
             return true
         }
         return true
-    }
-
-    fun twoSit(): String {
-        return ""
     }
 }

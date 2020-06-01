@@ -62,6 +62,11 @@ class Node(id: String? = null, val latitude: Float, val longitude: Float): Abstr
         nodeRef.ref = this.id!!
         return nodeRef
     }
+
+    fun deepCopy(): Node {
+        val JSON = Gson().toJson(this)
+        return Gson().fromJson(JSON, Node::class.java)
+    }
 }
 
 class Way(id: String? = null): AbstractElement(id) {
@@ -89,6 +94,11 @@ class Way(id: String? = null): AbstractElement(id) {
             rawWay.nds.add(node.toNodeReference())
         }
         return rawWay
+    }
+
+    fun deepCopy(): Way {
+        val JSON = Gson().toJson(this)
+        return Gson().fromJson(JSON, Way::class.java)
     }
 }
 
@@ -138,6 +148,11 @@ class Relation(id: String? = null): AbstractElement(id) {
         for (member in relationMembers) rawRelation.members.add(member.toRawMember("relation"))
 
         return rawRelation
+    }
+
+    fun deepCopy(): Relation {
+        val JSON = Gson().toJson(this)
+        return Gson().fromJson(JSON, Relation::class.java)
     }
 }
 

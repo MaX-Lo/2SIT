@@ -36,7 +36,7 @@ class Mapper {
     }
 
     private fun fillMissing() {
-        val missingStuff = getMissingStuff()
+        val missingStuff = getMissingOSMElements()
         val requester = Requester.getInstance("https://api.openstreetmap.org/api/0.6/")
 
         val missingNodes = missingStuff.first
@@ -68,10 +68,9 @@ class Mapper {
             val relationList = RawRelation.multipleFromString(requester.requestNodes(missingRelations))
             for (rawRelation in relationList) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
         }
-
     }
 
-    private fun getMissingStuff(): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
+    private fun getMissingOSMElements(): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
         val missingNodes = mutableListOf<String>()
         val missingWays = mutableListOf<String>()
         val missingRelations = mutableListOf<String>()
@@ -144,6 +143,10 @@ class Mapper {
         val buildingRelations = getAllBuildingRel()
         for (relation in buildingRelations) {
             val building = Building(relation.id)
+            val contained = getContainedElements(relation)
+            building.originalNodes = contained.first.map { it.deepCopy() }
+            building.originalWays = contained.second.map { it.deepCopy() }
+            building.originalRelations = contained.third.map { it.deepCopy() }
 
             for ((tag, value) in relation.additionalTags.entries) {
                 when (tag) {
@@ -164,9 +167,11 @@ class Mapper {
                     // todo this is a door
                     val door = allNodes[member.ref]!!
                 }
+
             }
 
             for (member in relation.wayMembers) {
+
                 if (building.mainWay == null) {
                     building.mainWay = allWays[member.ref]
                 } else {
@@ -290,11 +295,73 @@ class Mapper {
         }
     }
 
+    fun getContainedElements(relation: Relation): Triple<List<Node>, List<Way>, List<Relation>> {
+        /** get a list of all (recursively) referenced OSM Elements (Way, Node, Relation), including this */
+        val containedNodes = mutableListOf<Node>()
+        val containedWays = mutableListOf<Way>()
+        val containedRelations = mutableListOf<Relation>()
+
+        for (node in relation.nodeMembers) {
+            if (allNodes.containsKey(node.ref)) containedNodes.add(allNodes[node.ref]!!)
+        }
+
+        for (way in relation.wayMembers) {
+            if (allWays.containsKey(way.ref)) {
+                containedNodes.addAll(getContainedElements(allWays[way.ref]!!))
+                containedWays.add(allWays[way.ref]!!)
+            }
+        }
+
+        for (innerRelation in relation.relationMembers) {
+            if (allRelations.containsKey(innerRelation.ref)) {
+                val contained = getContainedElements(allRelations[innerRelation.ref]!!)
+                containedNodes.addAll(contained.first)
+                containedWays.addAll(contained.second)
+                containedRelations.addAll(contained.third)
+                containedRelations.add(allRelations[innerRelation.ref]!!)
+            }
+        }
+
+        return Triple(containedNodes, containedWays, containedRelations)
+    }
+
+    fun getContainedElements(way: Way): List<Node> {
+        return way.nodes.values.toList()
+    }
+
     fun exportBuildings() {
         // Todo implement for building currently just a test with ways
-
+        /**
+         * Requirements:
+         * - figure out which OSM Elements have changed, got deleted or were newly created
+         * - untouched elements should not appear in the exported diff
+         *
+         * Approach 1)
+         * - when initially creating a building object all contained OSM Elements (Nodes, Ways, Relations)
+         *   are stored as a copy
+         * - after parsing the building object into SIT
+         *   - convert the buildings indoorOSM objects back to the default OSM Elements
+         *   - create a diff between original OSM Element lists and resulting converted OSM Elements list
+         *   - for each Element:
+         *      - difference in Attributes -> create a modify entry with element and all its attributes
+         *      - Element not found in original lists -> create a create entry with element and negative id
+         *      - Element from copy missing in converted list -> create a deleted entry for element
+         *
+         * Approach 2)
+         * - each Element Type has a flag having one of three possible values:
+         *   1 - modify: set if an attribute or child element got modified
+         *   2 - create: set if the element got newly created
+         *   3 - delete: set if the element got removed since it isn't needed anymore
+        **/
         val osmChange = OsmChange()
         val modify = Modify()
+        val create = Create()
+        val delete = Delete()
+
+        for (building in buildings) {
+
+        }
+
         for (way in allWays.entries) {
             osmChange.modify.ways.add(way.value.toRawWay())
         }

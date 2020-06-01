@@ -106,12 +106,12 @@ class RawRelation : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawRelation {
-            return RawAbstractElement.fromString(rawXmlString, RawRelation::class.java) as RawRelation
+            return fromString(rawXmlString, RawRelation::class.java) as RawRelation
         }
 
         @JvmStatic
         fun multipleFromString(rawXmlString: String): List<RawRelation> {
-            return RawAbstractElement.multipleFromString(rawXmlString, RawRelation::class.java).filterIsInstance<RawRelation>()
+            return multipleFromString(rawXmlString, RawRelation::class.java).filterIsInstance<RawRelation>()
         }
     }
 
@@ -124,12 +124,12 @@ class RawWay : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawWay {
-            return RawAbstractElement.fromString(rawXmlString, RawWay::class.java) as RawWay
+            return fromString(rawXmlString, RawWay::class.java) as RawWay
         }
 
         @JvmStatic
         fun multipleFromString(rawXmlString: String): List<RawWay> {
-            return RawAbstractElement.multipleFromString(rawXmlString, RawWay::class.java).filterIsInstance<RawWay>()
+            return multipleFromString(rawXmlString, RawWay::class.java).filterIsInstance<RawWay>()
         }
     }
 
@@ -142,12 +142,12 @@ class RawNode : RawAbstractElement() {
     companion object {
         @JvmStatic
         fun fromString(rawXmlString: String): RawNode {
-            return RawAbstractElement.fromString(rawXmlString, RawNode::class.java) as RawNode
+            return fromString(rawXmlString, RawNode::class.java) as RawNode
         }
 
         @JvmStatic
         fun multipleFromString(rawXmlString: String): List<RawNode> {
-            return RawAbstractElement.multipleFromString(rawXmlString, RawNode::class.java).filterIsInstance<RawNode>()
+            return multipleFromString(rawXmlString, RawNode::class.java).filterIsInstance<RawNode>()
         }
     }
 
