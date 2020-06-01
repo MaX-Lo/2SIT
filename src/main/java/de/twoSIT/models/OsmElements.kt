@@ -1,5 +1,6 @@
 package de.twoSIT.models
 
+import com.google.gson.Gson
 import de.twoSIT.util.getLogger
 
 val logger = getLogger("Clean")

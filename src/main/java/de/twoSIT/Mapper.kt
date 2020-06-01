@@ -43,19 +43,19 @@ class Mapper {
         val missingWays = missingStuff.second
         val missingRelations = missingStuff.third
 
-        fun fetchNodes(missingNodes: List<String>){
-            if (missingNodes.isNotEmpty()){
+        fun fetchNodes(missingNodes: List<String>) {
+            if (missingNodes.isNotEmpty()) {
                 logger.info("Fetching ${missingNodes.size} nodes")
                 val nodeList = RawNode.multipleFromString(requester.requestNodes(missingNodes))
                 for (rawNode in nodeList) allNodes[rawNode.id] = Node.fromRaw(rawNode)
             }
         }
-        if (missingWays.isNotEmpty()){
+        if (missingWays.isNotEmpty()) {
             logger.info("Fetching ${missingWays.size} ways")
             val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
             val missingNodes = mutableListOf<String>()
-            for (rawWay in wayList){
-                for (nodeRef in rawWay.nds){
+            for (rawWay in wayList) {
+                for (nodeRef in rawWay.nds) {
                     if (!allNodes.containsKey(nodeRef.ref)) missingNodes.add(nodeRef.ref)
                 }
             }
@@ -63,7 +63,7 @@ class Mapper {
             for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
         }
         fetchNodes(missingNodes)
-        if (missingRelations.isNotEmpty()){
+        if (missingRelations.isNotEmpty()) {
             logger.info("Fetching ${missingRelations.size} relations")
             val relationList = RawRelation.multipleFromString(requester.requestNodes(missingRelations))
             for (rawRelation in relationList) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
@@ -327,7 +327,7 @@ class Mapper {
     }
 
     fun getContainedElements(way: Way): List<Node> {
-        return way.nodes.values.toList()
+        return way.nodes
     }
 
     fun exportBuildings() {
@@ -353,7 +353,7 @@ class Mapper {
          *   1 - modify: set if an attribute or child element got modified
          *   2 - create: set if the element got newly created
          *   3 - delete: set if the element got removed since it isn't needed anymore
-        **/
+         **/
         val osmChange = OsmChange()
         val modify = Modify()
         val create = Create()

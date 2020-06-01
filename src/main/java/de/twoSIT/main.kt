@@ -2,6 +2,8 @@ package de.twoSIT
 
 import de.twoSIT.models.Area
 import de.twoSIT.models.RawArea
+import de.twoSIT.models.RawNode
+import de.twoSIT.models.RawWay
 
 
 // bounding box examples for a buildings mapped as IndoorOSM and SIT
