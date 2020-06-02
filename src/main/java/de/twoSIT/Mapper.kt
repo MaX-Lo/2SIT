@@ -263,7 +263,6 @@ class Mapper {
     private fun parseRoom(way: Way, level: Int, building: Building) {
         val room = Room(way.id)
         room.level = level
-        room.nodes.addAll(way.nodes)
         room.subsections.addAll(way.subsections)
 
         for ((key, value) in way.additionalTags.entries) {

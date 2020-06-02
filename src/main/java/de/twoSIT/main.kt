@@ -26,5 +26,4 @@ fun main() {
     val converter = Converter()
     val sitBuildings = converter.convertBuildings(buildings)
     mapper.exportBuildings()
-    val x = ""
 }

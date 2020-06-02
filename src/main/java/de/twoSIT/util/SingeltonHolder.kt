@@ -1,7 +1,13 @@
 package de.twoSIT.util
 
-open class SingletonHolder<out T, in A>(private val constructor: (A) -> T) {
+/*
+Usage: extend the companion object
 
+class MySingleton{
+    companion object : SingletonHolder<MySingleton, String>(::MySingleton)
+}
+ */
+open class SingletonHolder<out T, in A>(private val constructor: (A) -> T) {
     @Volatile
     private var instance: T? = null
 

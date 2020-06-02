@@ -14,29 +14,35 @@ class Converter {
     }
 
     fun convertBuilding(building: Building): Building {
-        val subsectionMap = mutableMapOf<Int, MutableList<Room>>().withDefault {
+        val levelRoomMap = mutableMapOf<Int, MutableList<Room>>().withDefault {
             mutableListOf()
         }
         for (room in building.rooms) {
             val level = room.level ?: continue
 
-            val tmp = subsectionMap.getValue(level)
-            for (nodeInd in 0 until room.nodes.size - 1) {
-                tmp.add(room)
-            }
-            subsectionMap[level] = tmp
+            val tmp = levelRoomMap.getValue(level)
+            tmp.add(room)
+            levelRoomMap[level] = tmp
         }
 
-        val twinSubSections = mutableListOf<Pair<SubSection, SubSection>>()
         val alreadyFound = mutableSetOf<SubSection>()
         val levelSubsections = mutableListOf<SubSection>()
-        for ((level, rooms) in subsectionMap) {
+        val subsectionRoomMap = mutableMapOf<SubSection, Room>()
+        val twinSubSections = mutableListOf<Pair<SubSection, SubSection>>()
+        for ((level, rooms) in levelRoomMap) {
+            alreadyFound.clear()
+            levelSubsections.clear()
             // todo here smt more clever has to happen
 
-            levelSubsections.clear()
+            // fill the lookups
             for (room in rooms) {
-                levelSubsections.addAll(room.subsections)
+                for (subsection in room.subsections){
+                    subsectionRoomMap[subsection] = room
+                    levelSubsections.add(subsection)
+                }
             }
+
+            // find the stuff
             for (subsection1 in levelSubsections) {
                 for (subsection2 in levelSubsections) {
                     if (subsection1 === subsection2) continue
@@ -49,7 +55,20 @@ class Converter {
                     }
                 }
             }
+        }
 
+        // merge the stuff - real twins
+        for (twinSubSection in twinSubSections){
+            val subSection1 = twinSubSection.first
+            val subSection2 = twinSubSection.second
+            val mergedSubSection = subSection1.getMerged(subSection2)
+
+            val room1 = subsectionRoomMap[subSection1]!!
+            room1.replaceSubsection(subSection1, mergedSubSection)
+
+            val room2 = subsectionRoomMap[subSection2]!!
+            room2.replaceSubsection(subSection2, mergedSubSection)
+            val x = ""
         }
 
         return building

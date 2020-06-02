@@ -2,6 +2,7 @@ package de.twoSIT.models
 
 import de.twoSIT.Mapper
 import de.twoSIT.util.getLogger
+import kotlin.math.log
 
 enum class LevelConnectionType {
     STAIRS, CONVEYOR, ELEVATOR
@@ -77,7 +78,7 @@ class Room(id: String? = null) : Way(id) {
 }
 
 
-class Floor(id: String? = null) : Way(id) {
+class Floor(id: String? = null) : Relation(id) {
     var level: Int? = null
     var height: Float? = null
     var ref: String? = null
