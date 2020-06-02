@@ -54,14 +54,13 @@
             <version>2.8.6</version>
         </dependency>
 
-        <!-- geo distance -->
+        <!-- calculations -->
         <!-- https://mvnrepository.com/artifact/com.github.calzam/geo-distance -->
         <dependency>
             <groupId>com.github.calzam</groupId>
             <artifactId>geo-distance</artifactId>
             <version>1.0.2</version>
         </dependency>
-
 
         <!-- kotlin -->
         <dependency>

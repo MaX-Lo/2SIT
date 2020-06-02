@@ -25,6 +25,7 @@ class Converter {
 
         mergeRealTwins(levelRoomMap)
         // todo add Nodes into fake twins
+        mergeNodes(levelRoomMap)
 
         return building
     }
@@ -116,7 +117,6 @@ class Converter {
             // merge the stuff
             for (nodes in proximitNodes){
                 val mergedNode = Node.getMerged(nodes)
-
                 for (node in nodes){
                     for (subsection in nodeSubsectionMap[node]!!){
                         subsection.replaceNode(node, mergedNode)
