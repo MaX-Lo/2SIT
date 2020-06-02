@@ -331,43 +331,20 @@ class Mapper {
     }
 
     fun exportBuildings() {
-        // Todo implement for building currently just a test with ways
-        /**
-         * Requirements:
-         * - figure out which OSM Elements have changed, got deleted or were newly created
-         * - untouched elements should not appear in the exported diff
-         *
-         * Approach 1)
-         * - when initially creating a building object all contained OSM Elements (Nodes, Ways, Relations)
-         *   are stored as a copy
-         * - after parsing the building object into SIT
-         *   - convert the buildings indoorOSM objects back to the default OSM Elements
-         *   - create a diff between original OSM Element lists and resulting converted OSM Elements list
-         *   - for each Element:
-         *      - difference in Attributes -> create a modify entry with element and all its attributes
-         *      - Element not found in original lists -> create a create entry with element and negative id
-         *      - Element from copy missing in converted list -> create a deleted entry for element
-         *
-         * Approach 2)
-         * - each Element Type has a flag having one of three possible values:
-         *   1 - modify: set if an attribute or child element got modified
-         *   2 - create: set if the element got newly created
-         *   3 - delete: set if the element got removed since it isn't needed anymore
-         **/
-
         val osmChange = OsmChange()
         val modify = Modify()
         val create = Create()
         val delete = Delete()
 
+        // Todo implement diff calculation
         for (building in buildings) {
-
+            val resultingOsmElements = getContainedElements(building.toRelation())
         }
 
+        // Todo remove after finishing
         for (way in allWays.entries) {
             osmChange.modify.ways.add(way.value.toRawWay())
         }
         val xmlStr = osmChange.toXMLString()
     }
-
 }
