@@ -1,8 +1,6 @@
 package de.twoSIT
 
-import de.twoSIT.models.Building
-import de.twoSIT.models.Room
-import de.twoSIT.models.SubSection
+import de.twoSIT.models.*
 
 class Converter {
     fun convertBuildings(buildings: Iterable<Building>): Iterable<Building> {
@@ -25,24 +23,29 @@ class Converter {
             levelRoomMap[level] = tmp
         }
 
-        val alreadyFound = mutableSetOf<SubSection>()
-        val levelSubsections = mutableListOf<SubSection>()
+        mergeRealTwins(levelRoomMap)
+        // todo add Nodes into fake twins
+
+        return building
+    }
+
+
+    private fun mergeRealTwins(levelRoomMap: MutableMap<Int, MutableList<Room>>) {
         val subsectionRoomMap = mutableMapOf<SubSection, Room>()
         val twinSubSections = mutableListOf<Pair<SubSection, SubSection>>()
         for ((level, rooms) in levelRoomMap) {
-            alreadyFound.clear()
-            levelSubsections.clear()
-            // todo here smt more clever has to happen
+            val levelSubsections = mutableListOf<SubSection>()
 
             // fill the lookups
             for (room in rooms) {
-                for (subsection in room.subsections){
+                for (subsection in room.subsections) {
                     subsectionRoomMap[subsection] = room
                     levelSubsections.add(subsection)
                 }
             }
 
             // find the stuff
+            val alreadyFound = mutableSetOf<SubSection>()
             for (subsection1 in levelSubsections) {
                 for (subsection2 in levelSubsections) {
                     if (subsection1 === subsection2) continue
@@ -58,7 +61,7 @@ class Converter {
         }
 
         // merge the stuff - real twins
-        for (twinSubSection in twinSubSections){
+        for (twinSubSection in twinSubSections) {
             val subSection1 = twinSubSection.first
             val subSection2 = twinSubSection.second
             val mergedSubSection = subSection1.getMerged(subSection2)
@@ -68,11 +71,59 @@ class Converter {
 
             val room2 = subsectionRoomMap[subSection2]!!
             room2.replaceSubsection(subSection2, mergedSubSection)
-            val x = ""
         }
-
-        return building
     }
 
+    private fun mergeNodes(levelRoomMap: MutableMap<Int, MutableList<Room>>) {
+        val proximitNodes = mutableListOf<MutableSet<Node>>()
+        val nodeSubsectionMap = mutableMapOf<Node, MutableSet<SubSection>>().withDefault {
+            mutableSetOf()
+        }
+        for ((level, rooms) in levelRoomMap) {
+            // fill the lookup
+            val levelNodes = mutableListOf<Node>()
+            for (room in rooms) {
+                for (subsection in room.subsections) {
+                    levelNodes.add(subsection.node1)
+                    levelNodes.add(subsection.node2)
 
+                    var tmp = nodeSubsectionMap.getValue(subsection.node1)
+                    tmp.add(subsection)
+                    nodeSubsectionMap[subsection.node1] = tmp
+
+                    tmp = nodeSubsectionMap.getValue(subsection.node2)
+                    tmp.add(subsection)
+                    nodeSubsectionMap[subsection.node2] = tmp
+                }
+            }
+
+            // find the stuff
+            val alreadyVisit = mutableSetOf<Node>()
+            for (node in levelNodes) {
+                val proxies = mutableSetOf<Node>()
+                for (node1 in levelNodes) {
+                    if (node1 in alreadyVisit) continue
+                    if (node.inProximity(node1)) {
+                        proxies.add(node1)
+                    }
+                }
+                if (proxies.isNotEmpty()){
+                    proxies.add(node)
+                    proximitNodes.add(proxies)
+                }
+            }
+
+            // merge the stuff
+            for (nodes in proximitNodes){
+                val mergedNode = Node.getMerged(nodes)
+
+                for (node in nodes){
+                    for (subsection in nodeSubsectionMap[node]!!){
+                        subsection.replaceNode(node, mergedNode)
+                    }
+                }
+            }
+        }
+
+    }
 }

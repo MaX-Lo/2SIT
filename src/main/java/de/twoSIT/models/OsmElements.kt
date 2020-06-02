@@ -5,6 +5,7 @@ import GeoDistance
 import com.google.gson.Gson
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
+import sun.font.TrueTypeFont
 
 val logger = getLogger("Clean")
 
@@ -51,6 +52,24 @@ open class Node(id: String? = null, val latitude: Double, val longitude: Double)
             }
             return node
         }
+
+        fun getMerged(others: Iterable<Node>): Node {
+            val alreadyVisit = mutableSetOf<Node>()
+            for (node in others) {
+                for (node1 in others) {
+                    if (node1 in alreadyVisit) continue
+                    if (!node.inProximity(node1)) {
+                        logger.warn("merging nodes ${node.id}, ${node1.id} that are not in proximity!!")
+                    }
+                }
+            }
+
+            val latitude = others.map { it.latitude }.average()
+            val longitude = others.map { it.longitude }.average()
+
+            return Node(IdGenerator.getNewId(), latitude, longitude)
+        }
+
     }
 
     override fun compareTo(other: Node): Int {
@@ -60,10 +79,7 @@ open class Node(id: String? = null, val latitude: Double, val longitude: Double)
     }
 
     fun getMerged(other: Node): Node {
-        if (!inProximity(other)) {
-            logger.warn("merging two nodes that are not in proximity!!")
-        }
-        return Node(IdGenerator.getNewId(), (latitude + other.latitude) / 2, (longitude + other.longitude) / 2)
+        return getMerged(listOf(this, other))
     }
 
     fun inProximity(other: Node): Boolean {

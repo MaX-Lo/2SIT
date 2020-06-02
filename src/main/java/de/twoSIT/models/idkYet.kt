@@ -14,10 +14,24 @@ data class SubSection(var node1: Node, var node2: Node) {
     }
 
     fun getMerged(other: SubSection): SubSection {
-        return if (node1.inProximity(other.node1)){
+        return if (node1.inProximity(other.node1)) {
             SubSection(node1.getMerged(other.node1), node2.getMerged(other.node2))
         } else {
             SubSection(node1.getMerged(other.node2), node2.getMerged(other.node1))
+        }
+    }
+
+    fun replaceNode(old: Node, new: Node) {
+        when (old) {
+            node1 -> {
+                node1 = new
+            }
+            node2 -> {
+                node2 = new
+            }
+            else -> {
+                logger.warn("$old is not in this subsection...")
+            }
         }
     }
 }
