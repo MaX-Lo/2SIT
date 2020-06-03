@@ -24,5 +24,4 @@ class NodeTest {
         assertTrue { node1.distanceTo(node2).roundToInt() == 1568521 }
         assertTrue { node2.distanceTo(node1).roundToInt() == 1568521 }
     }
-
 }
