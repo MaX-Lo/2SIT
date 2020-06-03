@@ -1,8 +1,14 @@
 package de.twoSIT.models
 
-import de.twoSIT.Mapper
+import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
-import kotlin.math.log
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sqrt
+
+
+private val logger = getLogger("IndoorElement")
+
 
 enum class LevelConnectionType {
     STAIRS, CONVEYOR, ELEVATOR
@@ -83,6 +89,7 @@ class Floor(id: String? = null) : Relation(id) {
     var height: Float? = null
     var ref: String? = null
     var name: String? = null
+
     // Todo should be part of building root relation
     val usages = mutableMapOf<String, Way>()
 
@@ -131,7 +138,7 @@ class IndoorObject(id: String? = null, latitude: Double, longitude: Double, val 
     }
 }
 
-class Building(id: String? = null): AbstractElement(id) {
+class Building(id: String? = null) : AbstractElement(id) {
     companion object {
         @JvmStatic
         val logger = getLogger(Building::class.java)
@@ -196,5 +203,70 @@ class Building(id: String? = null): AbstractElement(id) {
         relation.wayMembers = wayMembers.toMutableList()
 
         return relation
+    }
+}
+
+data class SubSection(var node1: Node, var node2: Node) {
+    val len = sqrt(abs(node2.latitude - node1.latitude)) + sqrt(abs(node2.longitude - node1.longitude))
+
+    /**
+     *
+     *     https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point
+     * @param node the [Node] that should be projected
+     * @return a [Pair] of the projection [Node] as first and the distance to the [SubSection].node1 as second. The distance is 0 if the projected node is node1 and 1 if it is node2
+     * @return null if no projection is found within the [SubSection]
+     *
+     */
+    fun getInterception(node: Node): Pair<Node, Double>? {
+        if (node.inProximity(node1)) return Pair(node1, 0.0)
+        if (node.inProximity(node2)) return Pair(node2, 1.0)
+
+        val t = ((node.latitude - node1.latitude) * (node2.latitude - node1.latitude) + (node.longitude - node1.longitude) * (node2.longitude - node1.longitude)) / ((node2.latitude - node1.latitude).pow(2) + (node2.longitude - node1.longitude).pow(2))
+        if (0 < t || 1 < t) {
+            return null
+        }
+
+        val latitude = node1.latitude + t * (node2.latitude - node1.latitude)
+        val longitude = node1.longitude + t * (node2.longitude - node1.longitude)
+        return Pair(Node(IdGenerator.getNewId(), latitude, longitude), t)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is SubSection) {
+            if ((node1.inProximity(other.node1) && node2.inProximity(other.node2)) ||
+                    (node1.inProximity(other.node2) && node2.inProximity(other.node1))) {
+                // same start and end nodes
+                return true
+            }
+        }
+        return super.equals(other)
+    }
+
+    fun split(middleNode: Node): SubSection {
+        val tmp = node2.deepCopy()
+        node2 = middleNode
+        return SubSection(middleNode, tmp)
+    }
+
+    fun getMerged(other: SubSection): SubSection {
+        return if (node1.inProximity(other.node1)) {
+            SubSection(node1.getMerged(other.node1), node2.getMerged(other.node2))
+        } else {
+            SubSection(node1.getMerged(other.node2), node2.getMerged(other.node1))
+        }
+    }
+
+    fun replaceNode(old: Node, new: Node) {
+        when (old) {
+            node1 -> {
+                node1 = new
+            }
+            node2 -> {
+                node2 = new
+            }
+            else -> {
+                logger.warn("$old is not in this subsection...")
+            }
+        }
     }
 }

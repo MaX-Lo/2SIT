@@ -6,7 +6,7 @@ import com.google.gson.Gson
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
 
-val logger = getLogger("Clean")
+private val logger = getLogger("OsmElement")
 
 abstract class AbstractElement(var id: String? = null) {
     var additionalTags = mutableMapOf<String, String>()
@@ -39,8 +39,8 @@ abstract class AbstractElement(var id: String? = null) {
     }
 }
 
-open class Node(id: String? = null, val latitude: Double, val longitude: Double) : AbstractElement(id), Comparable<Node> {
-    val proximityThreshold = 0.2 // meters
+open class Node(id: String? = null, var latitude: Double, var longitude: Double) : AbstractElement(id) {
+    private val proximityThreshold = 0.2 // meters
 
     companion object {
         fun fromRaw(rawNode: RawNode): Node {
@@ -65,16 +65,14 @@ open class Node(id: String? = null, val latitude: Double, val longitude: Double)
 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
+            val additionalTags = mutableMapOf<String, String>()
+            others.map { additionalTags.putAll(it.additionalTags) }
 
-            return Node(IdGenerator.getNewId(), latitude, longitude)
+            val newNode = Node(IdGenerator.getNewId(), latitude, longitude)
+            newNode.additionalTags.putAll(additionalTags)
+
+            return newNode
         }
-
-    }
-
-    override fun compareTo(other: Node): Int {
-        if (id!! < other.id!!) return -1
-        if (id!! > other.id!!) return 1
-        return 0
     }
 
     fun getMerged(other: Node): Node {

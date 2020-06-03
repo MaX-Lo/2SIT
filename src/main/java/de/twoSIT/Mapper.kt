@@ -4,12 +4,10 @@ import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
 
 
-class Mapper {
-    companion object {
-        @JvmStatic
-        private val logger = getLogger(Mapper::class.java)
-    }
+private val logger = getLogger(Mapper::class.java)
 
+
+object Mapper {
     private val allWays = mutableMapOf<String, Way>()
     private val allRelations = mutableMapOf<String, Relation>()
     private val allNodes = mutableMapOf<String, Node>()
@@ -284,7 +282,7 @@ class Mapper {
                             room.outline = way
                             return
                         }
-                        else -> Mapper.logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
+                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
                     }
                 }
                 else -> room.additionalTags[key] = value
