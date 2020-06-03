@@ -5,7 +5,6 @@ import GeoDistance
 import com.google.gson.Gson
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
-import sun.font.TrueTypeFont
 
 val logger = getLogger("Clean")
 
@@ -119,7 +118,7 @@ open class Way(id: String? = null) : AbstractElement(id) {
             field.clear()
             for (subsection in subsections) {
                 field.add(subsection.node1)
-                field.add(subsection.node1)
+                field.add(subsection.node2)
             }
             return field
         }
@@ -144,8 +143,12 @@ open class Way(id: String? = null) : AbstractElement(id) {
 
     fun replaceSubsection(old: SubSection, new: SubSection) {
         if (old in subsections) {
+            var tmp = new.copy()
+            if (!old.node1.inProximity(new.node1)) {
+                tmp = SubSection(new.node2, new.node1)
+            }
             val ind = subsections.indexOf(old)
-            subsections[ind] = new
+            subsections[ind] = tmp
         } else {
             logger.warn("$old is not a subsection of room $id")
         }

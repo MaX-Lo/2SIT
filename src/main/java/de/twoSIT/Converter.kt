@@ -17,10 +17,9 @@ class Converter {
         }
         for (room in building.rooms) {
             val level = room.level ?: continue
-
-            val tmp = levelRoomMap.getValue(level)
-            tmp.add(room)
-            levelRoomMap[level] = tmp
+            val levelRooms = levelRoomMap.getValue(level)
+            levelRooms.add(room)
+            levelRoomMap[level] = levelRooms
         }
 
         mergeRealTwins(levelRoomMap)
@@ -35,18 +34,19 @@ class Converter {
         val subsectionRoomMap = mutableMapOf<SubSection, Room>()
         val twinSubSections = mutableListOf<Pair<SubSection, SubSection>>()
         for ((level, rooms) in levelRoomMap) {
-            val levelSubsections = mutableListOf<SubSection>()
+            val levelSubsections = mutableSetOf<SubSection>()
 
             // fill the lookups
             for (room in rooms) {
                 for (subsection in room.subsections) {
+                    // ToDo assumes everything is a double wall - walls shared by rooms could lead to failure
                     subsectionRoomMap[subsection] = room
                     levelSubsections.add(subsection)
                 }
             }
 
-            // find the stuff
-            val alreadyFound = mutableSetOf<SubSection>()
+            // match real twin subsections
+            val alreadyFound = mutableSetOf<SubSection>() // to eliminate duplicates
             for (subsection1 in levelSubsections) {
                 for (subsection2 in levelSubsections) {
                     if (subsection1 === subsection2) continue
@@ -99,7 +99,10 @@ class Converter {
             }
 
             // find the stuff
-            val alreadyVisit = mutableSetOf<Node>()
+            // FixMe could be optimized by two complete iterations over each nodes
+            //        it 1: find all close nodes
+            //        it 2: union list of close nodes with close nodes of the entries in this list
+            val alreadyVisit = mutableSetOf<Node>() // ToDo isn't used
             for (node in levelNodes) {
                 val proxies = mutableSetOf<Node>()
                 for (node1 in levelNodes) {
@@ -108,6 +111,7 @@ class Converter {
                         proxies.add(node1)
                     }
                 }
+
                 if (proxies.isNotEmpty()){
                     proxies.add(node)
                     proximitNodes.add(proxies)

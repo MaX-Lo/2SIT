@@ -11,6 +11,9 @@ data class SubSection(var node1: Node, var node2: Node) {
 
     /*
     https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point
+                       C
+                       |
+          A ---------- D ----------- B
      */
     fun getInterception(node: Node): Node? {
         if (node.inProximity(node1)) return node1
