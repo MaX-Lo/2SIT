@@ -80,8 +80,11 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
     }
 
     fun inProximity(other: Node): Boolean {
-        val distance = GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
-        return distance < proximityThreshold
+        return distanceTo(other) < proximityThreshold
+    }
+
+    fun distanceTo(other: Node): Double {
+        return GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
     }
 
     fun toRawNode(): RawNode {

@@ -64,25 +64,27 @@ object Converter {
         for (room in allRoomsOnLevel) {
             val newSubSections = mutableListOf<SubSection>()
             for (subsection in room.subsections) {
-                val interceptionPairs = mutableListOf<Pair<Node, Double>>()
+                val intersectionPairs = mutableListOf<Pair<Node, Double>>()
                 for (node in allNodesOnLevel.values) {
-                    val interception = subsection.getInterception(node) ?: continue
-                    interceptionPairs.add(interception)
+                    val intersection = subsection.getIntersection(node) ?: continue
+                    if (intersection.first.inProximity(node)) {
+                        intersectionPairs.add(intersection)
+                    }
                 }
-                interceptionPairs.sortBy { it.second }
+                intersectionPairs.sortBy { it.second }
+                val intersectionNodes = intersectionPairs.map { it.first }
 
-                /*
-                Idea: split the subsection with the sorted interceptionPairs.
-                The furthest SubSection will be at the beginning, the original will be added as closest at the end.
-                Therefore the list will be reversed at the end.
-                */
-                interceptionPairs.map { newSubSections.add(subsection.split(it.first)) }
-                newSubSections.add(subsection)
-                newSubSections.reverse()
-
-                room.subsections.clear()
-                room.subsections.addAll(newSubSections)
+                // Idea: split the subsection with at the sorted interceptionPairs into smaller subsections.
+                var currSubsection = subsection
+                newSubSections.add(currSubsection)
+                for (intersectionNode in intersectionNodes) {
+                    val newSubSection = currSubsection.split(intersectionNode)
+                    newSubSections.add(newSubSection)
+                    currSubsection = newSubSection
+                }
             }
+            room.subsections.clear()
+            room.subsections.addAll(newSubSections)
         }
     }
 

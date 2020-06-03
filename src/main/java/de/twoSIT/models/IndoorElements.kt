@@ -217,7 +217,7 @@ data class SubSection(var node1: Node, var node2: Node) {
      * @return null if no projection is found within the [SubSection]
      *
      */
-    fun getInterception(node: Node): Pair<Node, Double>? {
+    fun getIntersection(node: Node): Pair<Node, Double>? {
         if (node.inProximity(node1)) return Pair(node1, 0.0)
         if (node.inProximity(node2)) return Pair(node2, 1.0)
 
@@ -228,7 +228,9 @@ data class SubSection(var node1: Node, var node2: Node) {
 
         val latitude = node1.latitude + t * (node2.latitude - node1.latitude)
         val longitude = node1.longitude + t * (node2.longitude - node1.longitude)
-        return Pair(Node(IdGenerator.getNewId(), latitude, longitude), t)
+        val projectionPoint = Node(IdGenerator.getNewId(), latitude, longitude)
+
+        return Pair(projectionPoint, t)
     }
 
     override fun equals(other: Any?): Boolean {
