@@ -44,7 +44,7 @@ abstract class AbstractElement(var id: String? = null) {
 open class Node(id: String? = null, var latitude: Double, var longitude: Double) : AbstractElement(id) {
 
     companion object {
-        private val proximityThreshold = 0.2 // meters
+        private const val proximityThreshold = 0.2 // meters
 
         fun fromRaw(rawNode: RawNode): Node {
             val node = Node(rawNode.id, rawNode.lat, rawNode.lon)
@@ -58,9 +58,9 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
         fun getMerged(others: Iterable<Node>): Node {
             val othersAsList = others.toList()
             for (i in 0 until othersAsList.size - 1) {
-                val node1 = othersAsList.get(i)
+                val node1 = othersAsList[i]
                 for (j in i + 1 until othersAsList.size) {
-                    val node2 = othersAsList.get(j)
+                    val node2 = othersAsList[j]
                     if (node1.distanceTo(node2) > proximityThreshold * 1.5) {
                         logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity! Distance: ${node1.distanceTo(node2)}")
                     }
@@ -69,13 +69,9 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
-            val additionalTags = mutableMapOf<String, String>()
-            // ToDo tags contained in multiple nodes are overwritten - do we want that?
-            others.map { additionalTags.putAll(it.additionalTags) }
-
             val newNode = Node(IdGenerator.getNewId(), latitude, longitude)
-            newNode.additionalTags.putAll(additionalTags)
-
+            // ToDo tags contained in multiple nodes are overwritten - do we want that?
+            others.map { newNode.additionalTags.putAll(it.additionalTags) }
             return newNode
         }
     }
