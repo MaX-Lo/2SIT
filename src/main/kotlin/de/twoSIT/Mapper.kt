@@ -393,6 +393,8 @@ object Mapper {
             val nodes = resultingOsmElements.first
             val ways = resultingOsmElements.second
             val relations = resultingOsmElements.third
+
+            // populate create elements
             val originalNodeIds = building.originalNodes.map { it.id }.toSet()
             val originalWayIds = building.originalWays.map { it.id }.toSet()
             val originalRelationIds = building.originalRelations.map { it.id }.toSet()
@@ -401,6 +403,27 @@ object Mapper {
             for (way in ways) { if (way.id !in originalWayIds) create.ways.add(way.toRawWay()) }
             for (relation in relations) { if (relation.id !in originalRelationIds) create.relations.add(relation.toRawRelation()) }
             osmChange.create = create
+            logger.info("${create.nodes.size} nodes, ${create.ways.size} ways, ${create.relations.size} relations that got created")
+
+            // populate delete elements
+            val newNodeIds = nodes.map { it.id }.toSet()
+            val newWayIds = nodes.map { it.id }.toSet()
+            val newRelationIds = nodes.map { it.id}.toSet()
+
+            for (node in building.originalNodes) { if (node.id !in newNodeIds) delete.nodes.add(node.toRawNode()) }
+            for (way in building.originalWays) { if (way.id !in newWayIds) delete.ways.add(way.toRawWay()) }
+            for (relation in building.originalRelations) { if (relation.id !in newRelationIds) delete.relations.add(relation.toRawRelation()) }
+            osmChange.delete = delete
+            logger.info("${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
+
+            // populate modify elements
+            // currently we assume everything inside a building that's not created or deleted was modified
+            // ToDo for commiting a new changeset metadata as changeset, version, ... needs to be updated
+            for (node in nodes) { if (node.id in originalNodeIds) modify.nodes.add(node.toRawNode()) }
+            for (way in ways) { if (way.id in originalWayIds) modify.ways.add(way.toRawWay()) }
+            for (relation in relations) { if (relation.id in originalRelationIds) modify.relations.add(relation.toRawRelation()) }
+            osmChange.modify = modify
+            logger.info("${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
 
         osmChange.createExportFile()

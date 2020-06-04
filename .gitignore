@@ -3,4 +3,5 @@ target/
 2SIT.iml
 
 response_cache/
+export/
 logs/
