@@ -18,7 +18,6 @@ approach:
         a.
  */
 object Converter {
-    private val allNodesOnLevel = mutableMapOf<String, Node>()
     private var allRoomsOnLevel = mutableSetOf<Room>()
 
     fun convertBuildings(buildings: Iterable<Building>) {
@@ -45,29 +44,40 @@ object Converter {
 
     private fun convertLevel(rooms: MutableSet<Room>) {
         allRoomsOnLevel = rooms
-        allNodesOnLevel.clear()
 
         val allSubs = mutableListOf<SubSection>()
         allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
+        var t = getNodesForLevel()
 
         insertSubsections()
         allSubs.clear()
         allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
+
+        t = getNodesForLevel()
+
         mergeNodes()
 
         allSubs.clear()
         allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
+        t = getNodesForLevel()
         val x = ""
+
+    }
+
+    private fun getNodesForLevel(): MutableSet<Node> {
+        return allRoomsOnLevel.map { it.nodes }.flatten().toMutableSet()
     }
 
     private fun insertSubsections(){
+        val nodesOnLevel = getNodesForLevel()
+
         for (room in allRoomsOnLevel) {
             val newSubSections = mutableListOf<SubSection>()
             for (subsection in room.subsections) {
                 val intersectionPairs = mutableListOf<Pair<Node, Double>>()
-                for (node in allNodesOnLevel.values) {
+                for (node in nodesOnLevel) {
                     val intersection = subsection.getIntersection(node) ?: continue
-                    if (intersection.first.inProximity(node)) {
+                    if (intersection.first.inProximity(node) && intersection.second > 0 && intersection.second < 1) {
                         intersectionPairs.add(intersection)
                     }
                 }
@@ -91,9 +101,9 @@ object Converter {
     /*
     approach:
         1. create a set of sets of nodes (nodesToMerge)
-        2. iterate over allNodesOnLevel
+        2. iterate over all nodes on level
         3. for current node (curr):
-            a. iterate again over allNodesOnLevel (node1) -> if curr and node1 are close to each other, store node1 in a set (nodesNearby)
+            a. iterate again over all nodes on level (node1) -> if curr and node1 are close to each other, store node1 in a set (nodesNearby)
             b. find all sets in nodesToMerge that contain a node of nodesNearby and store them in (setsOfNearbyNodes)
             c. remove all sets of setsOfNearbyNodes from nodesToMerge
             d. add nodes of nodesNearby, that are not contained in a set and that set to setsOfNearbyNodes
@@ -101,15 +111,11 @@ object Converter {
              */
     private fun mergeNodes(){
         val nodesToMerge = mutableSetOf<MutableSet<Node>>()
+        val nodesOnLevel = getNodesForLevel()
 
-        for (room in allRoomsOnLevel) {
-            room.subsections.map { allNodesOnLevel[it.node1.id!!] = it.node1; allNodesOnLevel[it.node2.id!!] = it.node2 }
-        }
-
-        val allNodesSet = allNodesOnLevel.values.toSet()
-        for (node in allNodesSet){
+        for (node in nodesOnLevel){
             val nodesNearby = mutableSetOf<Node>()
-            for (node1 in allNodesSet){
+            for (node1 in nodesOnLevel){
                 if (node === node1) continue
                 if (node.inProximity(node1)){
                     nodesNearby.add(node1)

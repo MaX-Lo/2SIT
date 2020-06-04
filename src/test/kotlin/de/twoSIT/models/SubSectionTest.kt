@@ -60,7 +60,7 @@ class SubSectionTest {
         val intersection = subsection.getIntersection(node3)
         assertNotNull(intersection, "Can't perform intersection test since intersection was not found")
 
-        // expected results are measured by hand, precission is therefore not very high
+        // expected results are measured by hand, precession is therefore not very high
         val expectedNode = Node("-1", 51.0255, 13.7222)
         val expectedT = 0.35
         Assert.assertEquals(expectedNode.longitude, intersection.first.longitude, 0.0001)
