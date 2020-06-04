@@ -53,12 +53,13 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
         }
 
         fun getMerged(others: Iterable<Node>): Node {
-            val alreadyVisit = mutableSetOf<Node>()
-            for (node in others) {
-                for (node1 in others) {
-                    if (node1 in alreadyVisit) continue
-                    if (!node.inProximity(node1)) {
-                        logger.warn("merging nodes ${node.id}, ${node1.id} that are not in proximity!!")
+            val othersAsList = others.toList()
+            for (i in 0 until othersAsList.size - 1) {
+                val node1 = othersAsList.get(i)
+                for (j in i + 1 until othersAsList.size) {
+                    val node2 = othersAsList.get(j)
+                    if (!node1.inProximity(node2)) {
+                        logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity!!")
                     }
                 }
             }
@@ -66,6 +67,7 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
             val additionalTags = mutableMapOf<String, String>()
+            // ToDo tags contained in multiple nodes are overwritten - do we want that?
             others.map { additionalTags.putAll(it.additionalTags) }
 
             val newNode = Node(IdGenerator.getNewId(), latitude, longitude)
@@ -76,7 +78,7 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
     }
 
     fun getMerged(other: Node): Node {
-        return getMerged(listOf(this, other))
+        return getMerged(setOf(this, other))
     }
 
     fun inProximity(other: Node): Boolean {
@@ -123,7 +125,7 @@ open class Way(id: String? = null) : AbstractElement(id) {
             field.clear()
             for (subsection in subsections) {
                 field.add(subsection.node1)
-                field.add(subsection.node2)
+                //field.add(subsection.node2)
             }
             return field
         }

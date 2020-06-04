@@ -44,23 +44,9 @@ object Converter {
 
     private fun convertLevel(rooms: MutableSet<Room>) {
         allRoomsOnLevel = rooms
-
-        val allSubs = mutableListOf<SubSection>()
-        allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
-        var t = getNodesForLevel()
-
         insertSubsections()
-        allSubs.clear()
-        allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
-
-        t = getNodesForLevel()
-
-        mergeNodes()
-
-        allSubs.clear()
-        allRoomsOnLevel.map { allSubs.addAll(it.subsections) }
-        t = getNodesForLevel()
-        val x = ""
+        mergeNodes(allRoomsOnLevel)
+        val x = allRoomsOnLevel.map { val y = it.nodes }
 
     }
 
@@ -109,35 +95,35 @@ object Converter {
             d. add nodes of nodesNearby, that are not contained in a set and that set to setsOfNearbyNodes
             e. untie all sets of setsOfNearbyNodes and add the united set to nodesToMerge
              */
-    private fun mergeNodes(){
+    private fun mergeNodes(roomsOnLevel : MutableSet<Room>) {
         val nodesToMerge = mutableSetOf<MutableSet<Node>>()
         val nodesOnLevel = getNodesForLevel()
 
-        for (node in nodesOnLevel){
+        for (node in nodesOnLevel) {
             val nodesNearby = mutableSetOf<Node>()
-            for (node1 in nodesOnLevel){
+            for (node1 in nodesOnLevel) {
                 if (node === node1) continue
-                if (node.inProximity(node1)){
+                if (node.inProximity(node1)) {
                     nodesNearby.add(node1)
                 }
             }
 
             val setsOfNearbyNodes = mutableSetOf<MutableSet<Node>>()
             val nodesNotListedYet = mutableSetOf<Node>()
-            for (nodeNearby in nodesNearby){
+            for (nodeNearby in nodesNearby) {
                 var setFound = false
-                for (s in nodesToMerge){
-                    if (nodeNearby in s){
+                for (s in nodesToMerge) {
+                    if (nodeNearby in s) {
                         setsOfNearbyNodes.add(s)
                         setFound = true
                         break
                     }
                 }
-                if (!setFound){
+                if (!setFound) {
                     nodesNotListedYet.add(nodeNearby)
                 }
             }
-            for (s in setsOfNearbyNodes){
+            for (s in setsOfNearbyNodes) {
                 nodesToMerge.remove(s)
             }
             val unitedSet = mutableSetOf<Node>()
@@ -146,18 +132,25 @@ object Converter {
             nodesToMerge.add(unitedSet)
         }
 
-        for (nodes in nodesToMerge){
+        // create the new nodes and simultaneously create a map associating which nodes should be replaced by the
+        // new node in the next step
+        val oldToNewNodes = mutableMapOf<Node, Node>()
+        for (nodes in nodesToMerge) {
             val merged = Node.getMerged(nodes)
-            // to deal with the refs in a cheaty but convenient way, just copy all values to the objects them self
-            for (node in nodes){
-                node.id = merged.id
-                node.longitude = merged.longitude
-                node.latitude = merged.latitude
-                node.additionalTags.clear()
-                node.additionalTags.putAll(merged.additionalTags)
-            }
+            nodes.map { oldToNewNodes[it] = merged }
         }
 
+        // replace old nodes if they got merged, if subsections contain the same nodes now, delete them
+        for (room in allRoomsOnLevel) {
+            val toDeleteSubsection = mutableListOf<SubSection>()
+            for (subsection in room.subsections) {
+                if (oldToNewNodes.containsKey(subsection.node1)) subsection.node1 = oldToNewNodes[subsection.node1]!!
+                if (oldToNewNodes.containsKey(subsection.node2)) subsection.node2 = oldToNewNodes[subsection.node2]!!
+                if (subsection.node1 === subsection.node2) {
+                    toDeleteSubsection.add(subsection)
+                }
+            }
+            room.subsections.removeAll(toDeleteSubsection)
+        }
     }
-
 }
