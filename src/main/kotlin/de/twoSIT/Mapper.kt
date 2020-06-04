@@ -1,7 +1,11 @@
 package de.twoSIT
 
+import de.twoSIT.const.exportDir
+import de.twoSIT.const.exportFile
+import de.twoSIT.const.relationCacheFile
 import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
+import java.io.File
 
 
 private val logger = getLogger(Mapper::class.java)
@@ -337,12 +341,19 @@ object Mapper {
         // Todo implement diff calculation
         for (building in buildings) {
             val resultingOsmElements = getContainedElements(building.toRelation())
+            val nodes = resultingOsmElements.first
+            val ways = resultingOsmElements.second
+            val relations = resultingOsmElements.third
+            val originalNodeIds = building.originalNodes.map { it.id }.toSet()
+            val originalWayIds = building.originalWays.map { it.id }.toSet()
+            val originalRelationIds = building.originalRelations.map { it.id }.toSet()
+
+            for (node in nodes) { if (node.id !in originalNodeIds) create.nodes.add(node.toRawNode()) }
+            for (way in ways) { if (way.id !in originalWayIds) create.ways.add(way.toRawWay()) }
+            for (relation in relations) { if (relation.id !in originalRelationIds) create.relations.add(relation.toRawRelation()) }
+            osmChange.create = create
         }
 
-        // Todo remove after finishing
-        for (way in allWays.entries) {
-            osmChange.modify.ways.add(way.value.toRawWay())
-        }
-        val xmlStr = osmChange.toXMLString()
+        osmChange.createExportFile()
     }
 }

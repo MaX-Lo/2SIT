@@ -1,8 +1,10 @@
 package de.twoSIT.const
 
 import de.twoSIT.models.Area
+import java.time.LocalDateTime
 
 const val responseCacheDir = "response_cache"
+const val exportDir = "export"
 fun areaCacheFile(area: Area) : String{
     return "area_${area.minLatitude}_${area.minLongitude}_${area.maxLatitude}_${area.maxLongitude}.xml"
 }
@@ -14,6 +16,11 @@ fun nodeCacheFile(id: String) : String{
 }
 fun relationCacheFile(id: String) : String{
     return "node_${id}.xml"
+}
+
+fun exportFile(): String {
+    val date = LocalDateTime.now().toString().replace(":", "_")
+    return "export_${date}.osc"
 }
 
 const val logDir = "logs"
