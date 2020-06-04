@@ -1,11 +1,7 @@
 package de.twoSIT
 
-import de.twoSIT.const.exportDir
-import de.twoSIT.const.exportFile
-import de.twoSIT.const.relationCacheFile
 import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
-import java.io.File
 
 
 private val logger = getLogger(Mapper::class.java)
@@ -24,19 +20,28 @@ object Mapper {
         allNodes.clear()
         allWays.clear()
         allRelations.clear()
-        for (rawNode in rawArea.nodes) allNodes[rawNode.id] = Node.fromRaw(rawNode)
-        for (way in rawArea.ways) allWays[way.id] = Way.fromRaw(way, allNodes)
-        for (rawRelation in rawArea.relations) allRelations[rawRelation.id] = Relation.fromRaw(rawRelation)
+        rawArea.nodes.map { allNodes[it.id] = Node.fromRaw(it) }
+        rawArea.ways.map { allWays[it.id] = Way.fromRaw(it, allNodes) }
+        rawArea.relations.map { allRelations[it.id] = Relation.fromRaw(it) }
 
         // fetch missing stuff
         fillMissing()
+        logger.debug("Parsing area with a total of ${allNodes.size} nodes; ${allWays.size} ways and " +
+                "${allRelations.size} relations")
 
         // parse it
         parseBuildingRel()
 
+        logger.debug("Parsed area into ${buildings.size} buildings with a total of " +
+                "${buildings.map { it.rooms }.size} ways/rooms; ${buildings.map { it.floors }.size} relations/floors and " +
+                "${buildings.map { it.indoorObjects.size + it.rooms.map { it.nodes.size }.sum() }.sum()} nodes")
+        logger.warn("Could not parse ${unparsedBuildings.size} buildings")
         return buildings
     }
 
+    /**
+     * Checks for unfetched but referenced and therefore necessary objects and fetches them from server.
+     */
     private fun fillMissing() {
         val missingStuff = getMissingOSMElements()
         val requester = Requester.getInstance("https://api.openstreetmap.org/api/0.6/")
@@ -72,6 +77,11 @@ object Mapper {
         }
     }
 
+    /**
+     * checks for all buildings if there are any unfetched but necessary objects.
+     *
+     * @return a [Triple] consisting of [MutableList] for unfetched [Node]s, [Way]s and [Relation]s
+     */
     private fun getMissingOSMElements(): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
         val missingNodes = mutableListOf<String>()
         val missingWays = mutableListOf<String>()
@@ -88,6 +98,12 @@ object Mapper {
         return Triple(missingNodes, missingWays, missingRelations)
     }
 
+    /**
+     * checks for a given building if there are any unfetched but necessary objects.
+     *
+     * @param buildingRelation a [Relation] that represents the building to check
+     * @return a [Triple] consisting of [MutableList] for unfetched [Node]s, [Way]s and [Relation]s
+     */
     private fun getMissingStuffBuilding(buildingRelation: Relation): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
         val missingNodes = mutableListOf<String>()
         val missingWays = mutableListOf<String>()
@@ -113,6 +129,12 @@ object Mapper {
         return Triple(missingNodes, missingWays, missingRelations)
     }
 
+    /**
+     * checks for a given floor if there are any unfetched but necessary objects.
+     *
+     * @param floorRelation a [Relation] that represents the floor to check
+     * @return a [Triple] consisting of [MutableList] for unfetched [Node]s, [Way]s and [Relation]s
+     */
     private fun getMissingStuffFloor(floorRelation: Relation): Triple<MutableList<String>, MutableList<String>, MutableList<String>> {
         val missingNodes = mutableListOf<String>()
         val missingWays = mutableListOf<String>()
@@ -131,6 +153,11 @@ object Mapper {
         return Triple(missingNodes, missingWays, missingRelations)
     }
 
+    /**
+     * Extracts all [Relation]s that represent a building in the current [RawArea]
+     *
+     * @return a [MutableList] of [Relation]s that represent buildings
+     */
     private fun getAllBuildingRel(): MutableList<Relation> {
         val buildingRelations = mutableListOf<Relation>()
         for (relation in allRelations.values) {
@@ -141,6 +168,9 @@ object Mapper {
         return buildingRelations
     }
 
+    /**
+     * Parses all [Relation]s that represent buildings into a [Building] POJO
+     */
     private fun parseBuildingRel() {
         val buildingRelations = getAllBuildingRel()
         for (relation in buildingRelations) {
@@ -173,27 +203,26 @@ object Mapper {
             }
 
             for (member in relation.wayMembers) {
-
-                if (building.mainWay == null) {
-                    building.mainWay = allWays[member.ref]
-                } else {
-                    logger.info("Multiple mainWays for building-relation ${relation.id}")
-                }
+                if (building.mainWay == null) building.mainWay = allWays[member.ref]
+                else logger.info("Multiple mainWays for building-relation ${relation.id}")
             }
 
             for (member in relation.relationMembers) {
                 parseFloor(allRelations[member.ref]!!, building)
             }
 
-            if (building.check()) {
-                buildings.add(building)
-            } else {
-                unparsedBuildings.add(building)
-            }
+            if (building.check()) buildings.add(building)
+            else unparsedBuildings.add(building)
         }
 
     }
 
+    /**
+     * Parses a [Relation] that represents a floor into a [Floor] POJO and adds it to the [building]
+     *
+     * @param relation the [Relation] that represents the floor
+     * @param building the [Building] to add the [Floor] to
+     */
     private fun parseFloor(relation: Relation, building: Building) {
         val floor = Floor(relation.id)
 
@@ -250,6 +279,13 @@ object Mapper {
         }
     }
 
+    /**
+     * Parses a [Node] that represents a basic indoor object into a [IndoorObject] POJO and adds it to the [building]
+     *
+     * @param node the [Node] that represents the indoor object
+     * @param level the level the indoor object is on
+     * @param building the [Building] to add the [IndoorObject] to
+     */
     private fun parseIndoorObject(node: Node, level: Int, building: Building) {
         val indoorObject = IndoorObject(node.id, node.latitude, node.longitude, level)
         indoorObject.additionalTags.putAll(node.additionalTags)
@@ -257,11 +293,24 @@ object Mapper {
         if (indoorObject.check()) building.indoorObjects.add(indoorObject)
     }
 
+    /**
+     * Parses a [Way] that represents a level connection into a [LevelConnection] POJO and adds it to the [building]
+     *
+     * @param way the [Way] that represents the level connection
+     * @param building the [Building] to add the [LevelConnection] to
+     */
     private fun parseLevelConnections(way: Way, building: Building) {
         val levelConnection = LevelConnection(way.id)
         if (levelConnection.check()) building.connections.add(levelConnection)
     }
 
+    /**
+     * Parses a [Way] that represents a room into a [Room] POJO and adds it to the [building]
+     *
+     * @param way the [Way] that represents the room
+     * @param level the level the room is in
+     * @param building the [Building] to add the [Floor] to
+     */
     private fun parseRoom(way: Way, level: Int, building: Building) {
         val room = Room(way.id)
         room.level = level
