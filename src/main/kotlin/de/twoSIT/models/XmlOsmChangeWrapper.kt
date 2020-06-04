@@ -3,6 +3,9 @@ package de.twoSIT.models
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
+import de.twoSIT.const.exportDir
+import de.twoSIT.const.exportFile
+import java.io.File
 
 @JacksonXmlRootElement(localName = "osmChange")
 class OsmChange {
@@ -14,17 +17,31 @@ class OsmChange {
     val generator = "2SIT"
 
     @JacksonXmlProperty(localName = "modify")
-    val modify = Modify()
+    var modify = Modify()
     @JacksonXmlProperty(localName = "create")
-    val create = Create()
+    var create = Create()
     @JacksonXmlProperty(localName = "delete")
-    val delete = Delete()
+    var delete = Delete()
 
     fun toXMLString(): String {
         // todo add some fault tolerance here too
         val xmlMapper = XmlMapper()
         xmlMapper.setDefaultUseWrapper(false)
         return xmlMapper.writeValueAsString(this)
+    }
+
+    fun createExportFile() {
+
+        val xmlStr = toXMLString()
+
+        File(exportDir).mkdir()
+        val file = File("$exportDir/${exportFile()}")
+        file.printWriter().use { out ->
+            val lines = xmlStr.split("\n")
+            for (line in lines) {
+                out.println(line)
+            }
+        }
     }
 }
 

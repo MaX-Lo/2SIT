@@ -82,7 +82,7 @@ abstract class RawAbstractElement {
     var visible: Boolean = false
 
     @JacksonXmlProperty(isAttribute = true)
-    var version: Float = 0f
+    var version: Int = 0
 
     @JacksonXmlProperty(isAttribute = true)
     var changeset: String = "not available"

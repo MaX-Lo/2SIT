@@ -22,12 +22,14 @@ abstract class AbstractElement(var id: String? = null) {
 
     fun enrichWithCommonTags(element: RawAbstractElement) {
         element.id = id!!
-        element.visible = additionalTags.remove("visible")!!.toBoolean()
-        element.version = additionalTags.remove("version")!!.toFloat()
-        element.changeset = additionalTags.remove("changeset")!!
-        element.timestamp = additionalTags.remove("timestamp")!!
-        element.user = additionalTags.remove("user")!!
-        element.uid = additionalTags.remove("uid")!!
+        // ToDo confirm that defaults are usefull for new created elements, check if some of these need to be updated
+        //      for modified elements
+        element.visible = if (additionalTags.containsKey("visible")) additionalTags.remove("visible")!!.toBoolean() else true
+        element.version = if (additionalTags.containsKey("version")) additionalTags.remove("version")!!.toInt() else 1
+        element.changeset = if (additionalTags.containsKey("changeset")) additionalTags.remove("changeset")!! else "42"
+        element.timestamp = if (additionalTags.containsKey("timestamp")) additionalTags.remove("timestamp")!! else ""
+        element.user = if (additionalTags.containsKey("user")) additionalTags.remove("user")!! else "2SIT"
+        element.uid = if (additionalTags.containsKey("uid")) additionalTags.remove("uid")!! else "-1"
 
         element.tags = mutableListOf()
         for (tag in additionalTags) {
@@ -40,9 +42,10 @@ abstract class AbstractElement(var id: String? = null) {
 }
 
 open class Node(id: String? = null, var latitude: Double, var longitude: Double) : AbstractElement(id) {
-    private val proximityThreshold = 0.2 // meters
 
     companion object {
+        private val proximityThreshold = 0.2 // meters
+
         fun fromRaw(rawNode: RawNode): Node {
             val node = Node(rawNode.id, rawNode.lat, rawNode.lon)
             node.mapCommonTags(rawNode)
@@ -58,8 +61,8 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
                 val node1 = othersAsList.get(i)
                 for (j in i + 1 until othersAsList.size) {
                     val node2 = othersAsList.get(j)
-                    if (!node1.inProximity(node2)) {
-                        logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity!!")
+                    if (node1.distanceTo(node2) > proximityThreshold * 1.5) {
+                        logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity! Distance: ${node1.distanceTo(node2)}")
                     }
                 }
             }
