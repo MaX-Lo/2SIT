@@ -80,10 +80,14 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
     }
 
     fun inProximity(other: Node): Boolean {
+        // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
         return distanceTo(other) < proximityThreshold
     }
 
     fun distanceTo(other: Node): Double {
+        /**
+         * @return the haversine distance to [other] in meters
+         */
         return GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
     }
 

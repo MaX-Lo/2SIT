@@ -222,7 +222,7 @@ data class SubSection(var node1: Node, var node2: Node) {
         if (node.inProximity(node2)) return Pair(node2, 1.0)
 
         val t = ((node.latitude - node1.latitude) * (node2.latitude - node1.latitude) + (node.longitude - node1.longitude) * (node2.longitude - node1.longitude)) / ((node2.latitude - node1.latitude).pow(2) + (node2.longitude - node1.longitude).pow(2))
-        if (0 < t || 1 < t) {
+        if (t < 0 || t > 1) {
             return null
         }
 
