@@ -2,8 +2,10 @@ package de.twoSIT
 
 import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
+import kotlin.math.log
 
 private val logger = getLogger(Converter::class.java)
+
 /*
 approach:
     1. We iterate over all buildings
@@ -18,14 +20,24 @@ approach:
         a.
  */
 object Converter {
-    private var allRoomsOnLevel = mutableSetOf<Room>()
-
+    /**
+     * Converts a given [Iterable] of [Building]s. This includes the merge of the [Room]s as well as the
+     * [LevelConnection]s of each building
+     *
+     * @param buildings a [Iterable] of [Building]s to convert
+     */
     fun convertBuildings(buildings: Iterable<Building>) {
         for (building in buildings) {
+            logger.debug("Start to convert building '${building.id}'")
             convertBuilding(building)
         }
     }
 
+    /**
+     * Converts a given [Building]. This includes the merge of the [Room]s as well as the [LevelConnection]s
+     *
+     * @param building the [Building] to convert
+     */
     fun convertBuilding(building: Building) {
         val levelRoomMap = mutableMapOf<Int, MutableSet<Room>>().withDefault {
             mutableSetOf()
@@ -37,27 +49,56 @@ object Converter {
             tmp.add(room)
             levelRoomMap[level] = tmp
         }
+
+        logger.debug("Found a total of ${levelRoomMap.size} levels and ${levelRoomMap.map { it.value.size }.size} rooms")
         for ((level, rooms) in levelRoomMap) {
+            logger.debug("Start to convert level '${level}' of building ${building.id}")
             convertLevel(rooms)
         }
     }
 
-    private fun convertLevel(rooms: MutableSet<Room>) {
-        allRoomsOnLevel = rooms
-        insertSubsections()
-        mergeNodes(allRoomsOnLevel)
-        val x = allRoomsOnLevel.map { val y = it.nodes }
-
+    private fun convertLevel(roomsOnLevel: MutableSet<Room>) {
+        val subSectionCount = getSubSectionsForLevel(roomsOnLevel)
+        val nodeCount = getNodesForLevel(roomsOnLevel)
+        insertSubsections(roomsOnLevel)
+        mergeNodes(roomsOnLevel)
+        logger.debug("Inserted ${getSubSectionsForLevel(roomsOnLevel) - subSectionCount} subsections")
+        logger.debug("Merged ${getNodesForLevel(roomsOnLevel) - nodeCount} nodes")
     }
 
-    private fun getNodesForLevel(): MutableSet<Node> {
-        return allRoomsOnLevel.map { it.nodes }.flatten().toMutableSet()
+    /**
+     * This function extracts all [SubSection]s of all [Room]s.
+     *
+     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
+     * @return a [MutableSet] of all [SubSection]s on the level
+     *
+     */
+    private fun getSubSectionsForLevel(roomsOnLevel: MutableSet<Room>): MutableSet<SubSection> {
+        return roomsOnLevel.map { it.subsections }.flatten().toMutableSet()
     }
 
-    private fun insertSubsections(){
-        val nodesOnLevel = getNodesForLevel()
 
-        for (room in allRoomsOnLevel) {
+    /**
+     * This function extracts all [Node]s of all [Room]s.
+     *
+     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
+     * @return a [MutableSet] of all [Node]s on the level
+     *
+     */
+    private fun getNodesForLevel(roomsOnLevel: MutableSet<Room>): MutableSet<Node> {
+        return roomsOnLevel.map { it.nodes }.flatten().toMutableSet()
+    }
+
+    /**
+     * This function splits a [SubSection] into two following [SubSection]s if a [Node] of any [Room] of the level has a
+     * projection-[Node] on the [SubSection], which is close to the [Node] itself.
+     *
+     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
+     */
+    private fun insertSubsections(roomsOnLevel: MutableSet<Room>) {
+        val nodesOnLevel = getNodesForLevel(roomsOnLevel)
+
+        for (room in roomsOnLevel) {
             val newSubSections = mutableListOf<SubSection>()
             for (subsection in room.subsections) {
                 val intersectionPairs = mutableListOf<Pair<Node, Double>>()
@@ -70,7 +111,6 @@ object Converter {
                 intersectionPairs.sortBy { it.second }
                 val intersectionNodes = intersectionPairs.map { it.first }
 
-                // Idea: split the subsection with at the sorted interceptionPairs into smaller subsections.
                 var currSubsection = subsection
                 newSubSections.add(currSubsection)
                 for (intersectionNode in intersectionNodes) {
@@ -84,20 +124,38 @@ object Converter {
         }
     }
 
-    /*
-    approach:
-        1. create a set of sets of nodes (nodesToMerge)
-        2. iterate over all nodes on level
-        3. for current node (curr):
-            a. iterate again over all nodes on level (node1) -> if curr and node1 are close to each other, store node1 in a set (nodesNearby)
-            b. find all sets in nodesToMerge that contain a node of nodesNearby and store them in (setsOfNearbyNodes)
-            c. remove all sets of setsOfNearbyNodes from nodesToMerge
-            d. add nodes of nodesNearby, that are not contained in a set and that set to setsOfNearbyNodes
-            e. untie all sets of setsOfNearbyNodes and add the united set to nodesToMerge
-             */
-    private fun mergeNodes(roomsOnLevel : MutableSet<Room>) {
+    private fun mergeNodes(roomsOnLevel: MutableSet<Room>) {
+        val nodesToMerge = nodesToMerge(roomsOnLevel)
+        logger.debug("Merging ${nodesToMerge.map { it.size }.sum()} into ${nodesToMerge.size} nodes")
+        replaceNodes(nodesToMerge, roomsOnLevel)
+    }
+
+    /**
+     *
+     * This function returns a set of sets, in which all nodes are contained, that are close to each other and therefore
+     * should be merged. These sets are distinct, so a node in one set will not appear in another.
+     * The proximity of the nodes is calculated transitive, meaning if
+     *      1. node A is close to node B
+     *      2. node B is close to node C
+     *          --> A is close to C
+     *
+     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
+     * @return a [MutableSet] of distinct sets which contain [Node]s that are in proximity of each other
+     *
+     * approach:
+     * 1. create a set of sets of nodes (nodesToMerge)
+     * 2. iterate over all nodes on level
+     * 3. for current node (curr):
+     * a. iterate again over all nodes on level (node1) -> if curr and node1 are close to each other, store node1 in a set (nodesNearby)
+     * b. find all sets in nodesToMerge that contain a node of nodesNearby and store them in (setsOfNearbyNodes)
+     * c. remove all sets of setsOfNearbyNodes from nodesToMerge
+     * d. add nodes of nodesNearby, that are not contained in a set and that set to setsOfNearbyNodes
+     * e. untie all sets of setsOfNearbyNodes and add the united set to nodesToMerge
+     *
+     */
+    private fun nodesToMerge(roomsOnLevel: MutableSet<Room>): MutableSet<MutableSet<Node>> {
         val nodesToMerge = mutableSetOf<MutableSet<Node>>()
-        val nodesOnLevel = getNodesForLevel()
+        val nodesOnLevel = getNodesForLevel(roomsOnLevel)
 
         for (node in nodesOnLevel) {
             val nodesNearby = mutableSetOf<Node>()
@@ -131,17 +189,25 @@ object Converter {
             setsOfNearbyNodes.map { unitedSet.addAll(it) }
             nodesToMerge.add(unitedSet)
         }
+        return nodesToMerge
+    }
 
-        // create the new nodes and simultaneously create a map associating which nodes should be replaced by the
-        // new node in the next step
+    /**
+     * This function merges the nodes in [nodesToMerge] and updates the references of each subsection.
+     * It furthermore removes SubSections of len 0 and updates the references in the according rooms.
+     *
+     * @param nodesToMerge a [MutableSet] of distinct sets that contain [Node]s that should be merged
+     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
+     *
+     */
+    private fun replaceNodes(nodesToMerge: MutableSet<MutableSet<Node>>, roomsOnLevel: MutableSet<Room>){
         val oldToNewNodes = mutableMapOf<Node, Node>()
         for (nodes in nodesToMerge) {
             val merged = Node.getMerged(nodes)
             nodes.map { oldToNewNodes[it] = merged }
         }
 
-        // replace old nodes if they got merged, if subsections contain the same nodes now, delete them
-        for (room in allRoomsOnLevel) {
+        for (room in roomsOnLevel) {
             val toDeleteSubsection = mutableListOf<SubSection>()
             for (subsection in room.subsections) {
                 if (oldToNewNodes.containsKey(subsection.node1)) subsection.node1 = oldToNewNodes[subsection.node1]!!
