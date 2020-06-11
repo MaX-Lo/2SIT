@@ -85,6 +85,7 @@ class Room(id: String? = null) : Way(id) {
 
 
 class Floor(id: String? = null) : Relation(id) {
+    var shell: Way? = null
     var level: Int? = null
     var height: Float? = null
     var ref: String? = null
@@ -116,7 +117,7 @@ class Floor(id: String? = null) : Relation(id) {
     }
 }
 
-class IndoorObject(id: String? = null, latitude: Double, longitude: Double, val level: Int?) : Node(id, latitude, longitude) {
+class IndoorObject(id: String? = null, latitude: Double, longitude: Double, val level: Int) : Node(id, latitude, longitude) {
 
     fun check(): Boolean {
         if (id == null) {
@@ -128,6 +129,10 @@ class IndoorObject(id: String? = null, latitude: Double, longitude: Double, val 
             return false
         }
         return true
+    }
+
+    override fun toRaw(): RawNode {
+        return toNode().toRaw()
     }
 
     fun toNode(): Node {

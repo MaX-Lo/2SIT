@@ -169,7 +169,7 @@ object Mapper {
     }
 
     /**
-     * Parses all [Relation]s that represent buildings into a [Building] POJO
+     * Parses all [Relation]s that represent buildings into a [Building]
      */
     private fun parseBuildingRel() {
         val buildingRelations = getAllBuildingRel()
@@ -239,9 +239,10 @@ object Mapper {
 
         for (member in relation.nodeMembers) {
             if (floor.level == null) {
-                logger.warn("Cannot parse room ${member.ref}: floor has no level")
+                logger.warn("Cannot parse node member ${member.ref}: floor has no level")
             } else {
-                parseIndoorObject(allNodes[member.ref]!!, floor.level!!, building)
+                val tmp = allNodes[member.ref]!!
+                parseIndoorObject(tmp, floor.level!!, building)
             }
         }
 
@@ -253,7 +254,12 @@ object Mapper {
                 if ("level:usage" in way.additionalTags.keys) {
                     floor.usages[way.additionalTags["level:usage"]!!] = way
                 } else {
-                    parseRoom(way, floor.level!!, building)
+                    when(member.role){
+                        "buildingpart" -> parseRoom(way, floor.level!!, building)
+                        "shell" -> floor.shell = way
+                        else -> logger.info("Unrecognized member role in floor ${floor.id}: '${member.role}'")
+                    }
+
                 }
             }
         }
@@ -314,7 +320,11 @@ object Mapper {
     private fun parseRoom(way: Way, level: Int, building: Building) {
         val room = Room(way.id)
         room.level = level
-        room.subsections.addAll(way.subsections)
+        for (subsection in way.subsections) {
+            subsection.node1.additionalTags["level"] = level.toString()
+            subsection.node2.additionalTags["level"] = level.toString()
+            room.subsections.add(subsection)
+        }
 
         for ((key, value) in way.additionalTags.entries) {
             when (key) {

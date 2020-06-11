@@ -96,11 +96,21 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
         return GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
     }
 
-    fun toRawNode(): RawNode {
+    open fun toRaw(): RawNode {
         val rawNode = RawNode()
         enrichWithCommonTags(rawNode)
         rawNode.lat = this.latitude
         rawNode.lon = this.longitude
+
+        if (additionalTags.containsKey("level")) {
+            val level = Tag()
+            level.k = "level"
+            level.v = additionalTags["level"]!!
+            rawNode.tags.add(level)
+        } else {
+            val iafd = 1
+        }
+
         return rawNode
     }
 
@@ -128,7 +138,6 @@ open class Way(id: String? = null) : AbstractElement(id) {
             field.clear()
             for (subsection in subsections) {
                 field.add(subsection.node1)
-                //field.add(subsection.node2)
             }
             return field
         }
@@ -164,7 +173,7 @@ open class Way(id: String? = null) : AbstractElement(id) {
         }
     }
 
-    fun toRawWay(): RawWay {
+    fun toRaw(): RawWay {
         val rawWay = RawWay()
         enrichWithCommonTags(rawWay)
         rawWay.nds = mutableListOf()
@@ -226,7 +235,7 @@ open class Relation(id: String? = null) : AbstractElement(id) {
     }
 
 
-    fun toRawRelation(): RawRelation {
+    fun toRaw(): RawRelation {
         val rawRelation = RawRelation()
         enrichWithCommonTags(rawRelation)
         rawRelation.members = mutableListOf()
