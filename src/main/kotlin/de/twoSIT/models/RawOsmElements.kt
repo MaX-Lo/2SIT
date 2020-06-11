@@ -9,30 +9,6 @@ import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
 
 
-class RawMember {
-    @JacksonXmlProperty(isAttribute = true)
-    var type: String = "not available"
-
-    @JacksonXmlProperty(isAttribute = true)
-    var ref: String = "not available"
-
-    @JacksonXmlProperty(isAttribute = true)
-    var role: String = "not available"
-}
-
-class RawNodeReference {
-    @JacksonXmlProperty(isAttribute = true)
-    var ref: String = "not available"
-}
-
-class Tag {
-    @JacksonXmlProperty(isAttribute = true)
-    var k: String = "not available"
-
-    @JacksonXmlProperty(isAttribute = true)
-    var v: String = "not available"
-}
-
 abstract class RawAbstractElement {
 
     companion object {
@@ -98,6 +74,31 @@ abstract class RawAbstractElement {
 
     @JacksonXmlProperty(localName = "tag")
     var tags: MutableList<Tag> = mutableListOf()
+}
+
+
+class RawMember {
+    @JacksonXmlProperty(isAttribute = true)
+    var type: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var ref: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var role: String = "not available"
+}
+
+class RawNodeReference {
+    @JacksonXmlProperty(isAttribute = true)
+    var ref: String = "not available"
+}
+
+class Tag {
+    @JacksonXmlProperty(isAttribute = true)
+    var k: String = "not available"
+
+    @JacksonXmlProperty(isAttribute = true)
+    var v: String = "not available"
 }
 
 

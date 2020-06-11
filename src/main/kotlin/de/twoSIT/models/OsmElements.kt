@@ -8,8 +8,25 @@ import de.twoSIT.util.getLogger
 
 private val logger = getLogger("OsmElement")
 
-abstract class AbstractElement(var id: String? = null) {
-    var additionalTags = mutableMapOf<String, String>()
+data class Member(val ref: String, val role: String) {
+    fun toRawMember(type: String): RawMember {
+        val rawMember = RawMember()
+        rawMember.type = type
+        rawMember.ref = ref
+        rawMember.role = role
+        return rawMember
+    }
+}
+
+abstract class AbstractOsmElement(val id: String, val additionalTags: MutableMap<String, String>) {
+
+    companion object {
+        fun fromRaw(element: RawAbstractElement): AbstractOsmElement {
+            throw NotImplementedError()
+        }
+    }
+
+    abstract fun toRaw(): RawAbstractElement
 
     fun mapCommonTags(rawElement: RawAbstractElement) {
         additionalTags["visible"] = rawElement.visible.toString()
@@ -21,7 +38,7 @@ abstract class AbstractElement(var id: String? = null) {
     }
 
     fun enrichWithCommonTags(element: RawAbstractElement) {
-        element.id = id!!
+        element.id = id
         // ToDo confirm that defaults are usefull for new created elements, check if some of these need to be updated
         //      for modified elements
         element.visible = if (additionalTags.containsKey("visible")) additionalTags.remove("visible")!!.toBoolean() else true
@@ -41,17 +58,20 @@ abstract class AbstractElement(var id: String? = null) {
     }
 }
 
-open class Node(id: String? = null, var latitude: Double, var longitude: Double) : AbstractElement(id) {
+open class Node(id: String, var latitude: Double, var longitude: Double, additionalTags: MutableMap<String, String>) :
+        AbstractOsmElement(id, additionalTags) {
 
     companion object {
+        // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
         private const val proximityThreshold = 0.2 // meters
 
         fun fromRaw(rawNode: RawNode): Node {
-            val node = Node(rawNode.id, rawNode.lat, rawNode.lon)
-            node.mapCommonTags(rawNode)
+            val additionalTags = mutableMapOf<String, String>()
             for (tag in rawNode.tags) {
-                node.additionalTags[tag.k] = tag.v
+                additionalTags[tag.k] = tag.v
             }
+            val node = Node(rawNode.id, rawNode.lat, rawNode.lon, additionalTags)
+            node.mapCommonTags(rawNode)
             return node
         }
 
@@ -66,13 +86,14 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
                     }
                 }
             }
+            // ToDo tags contained in multiple nodes are overwritten - do we want that?
+            val additionalTags = mutableMapOf<String, String>()
+            others.map { additionalTags.putAll(it.additionalTags) }
 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
-            val newNode = Node(IdGenerator.getNewId(), latitude, longitude)
-            // ToDo tags contained in multiple nodes are overwritten - do we want that?
-            others.map { newNode.additionalTags.putAll(it.additionalTags) }
-            return newNode
+
+            return Node(IdGenerator.getNewId(), latitude, longitude, additionalTags)
         }
     }
 
@@ -81,7 +102,6 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
     }
 
     fun inProximity(other: Node): Boolean {
-        // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
         return distanceTo(other) < proximityThreshold
     }
 
@@ -92,7 +112,7 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
         return GeoDistance.haversineDistanceInM(Coordinate(latitude, longitude), Coordinate(other.latitude, other.longitude))
     }
 
-    fun toRawNode(): RawNode {
+    override fun toRaw(): RawNode {
         val rawNode = RawNode()
         enrichWithCommonTags(rawNode)
         rawNode.lat = this.latitude
@@ -102,13 +122,12 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
 
     fun toNodeReference(): RawNodeReference {
         val nodeRef = RawNodeReference()
-        assert(id != null) { "Conversion to NodeReference impossible, id is missing" }
-        nodeRef.ref = this.id!!
+        nodeRef.ref = this.id
         return nodeRef
     }
 
     fun toMember(): Member {
-        return Member(id!!, "")
+        return Member(id, "")
     }
 
     fun deepCopy(): Node {
@@ -117,31 +136,34 @@ open class Node(id: String? = null, var latitude: Double, var longitude: Double)
     }
 }
 
-open class Way(id: String? = null) : AbstractElement(id) {
+open class Way(id: String, additionalTags: MutableMap<String, String>) : AbstractOsmElement(id, additionalTags) {
     val subsections = mutableListOf<SubSection>()
     val nodes = mutableListOf<Node>()
         get() {
             field.clear()
             for (subsection in subsections) {
                 field.add(subsection.node1)
-                //field.add(subsection.node2)
             }
             return field
         }
 
     companion object {
         fun fromRaw(rawWay: RawWay, allNodes: MutableMap<String, Node>): Way {
-            val way = Way(rawWay.id)
+            val additionalTags = mutableMapOf<String, String>()
+            for (tag in rawWay.tags) {
+                additionalTags[tag.k] = tag.v
+            }
+
             val nodes = mutableListOf<Node>()
             for (nodeRef in rawWay.nds) {
                 nodes.add(allNodes[nodeRef.ref]!!)
             }
+
+            val way = Way(rawWay.id, additionalTags)
+            way.mapCommonTags(rawWay)
+
             for (nodeInd in 0 until nodes.size - 1) {
                 way.subsections.add(SubSection(nodes[nodeInd], nodes[nodeInd + 1]))
-            }
-            way.mapCommonTags(rawWay)
-            for (tag in rawWay.tags) {
-                way.additionalTags[tag.k] = tag.v
             }
             return way
         }
@@ -160,7 +182,7 @@ open class Way(id: String? = null) : AbstractElement(id) {
         }
     }
 
-    fun toRawWay(): RawWay {
+    override fun toRaw(): RawWay {
         val rawWay = RawWay()
         enrichWithCommonTags(rawWay)
         rawWay.nds = mutableListOf()
@@ -176,29 +198,26 @@ open class Way(id: String? = null) : AbstractElement(id) {
     }
 
     fun toMember(): Member {
-        return Member(id!!, "")
+        return Member(id, "")
     }
 }
 
-
-data class Member(val ref: String, val role: String) {
-    fun toRawMember(type: String): RawMember {
-        val rawMember = RawMember()
-        rawMember.type = type
-        rawMember.ref = ref
-        rawMember.role = role
-        return rawMember
-    }
-}
-
-open class Relation(id: String? = null) : AbstractElement(id) {
+open class Relation(id: String, additionalTags: MutableMap<String, String>) :
+        AbstractOsmElement(id, additionalTags) {
     var nodeMembers = mutableListOf<Member>()
     var wayMembers = mutableListOf<Member>()
     var relationMembers = mutableListOf<Member>()
 
     companion object {
         fun fromRaw(rawRelation: RawRelation): Relation {
-            val relation = Relation(rawRelation.id)
+            val additionalTags = mutableMapOf<String, String>()
+            for (tag in rawRelation.tags) {
+                additionalTags[tag.k] = tag.v
+            }
+
+            val relation = Relation(rawRelation.id, additionalTags)
+            relation.mapCommonTags(rawRelation)
+
             for (rawMember in rawRelation.members) {
                 val member = Member(rawMember.ref, rawMember.role)
                 when (rawMember.type) {
@@ -208,21 +227,17 @@ open class Relation(id: String? = null) : AbstractElement(id) {
                     else -> logger.info("unexpected membertype found: ${rawMember.type}")
                 }
             }
-            relation.mapCommonTags(rawRelation)
-            for (tag in rawRelation.tags) {
-                relation.additionalTags[tag.k] = tag.v
-            }
 
             return relation
         }
     }
 
     fun toMember(): Member {
-        return Member(id!!, "")
+        return Member(id, "")
     }
 
 
-    fun toRawRelation(): RawRelation {
+    override fun toRaw(): RawRelation {
         val rawRelation = RawRelation()
         enrichWithCommonTags(rawRelation)
         rawRelation.members = mutableListOf()
