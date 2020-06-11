@@ -13,7 +13,7 @@ object Mapper {
     private val allNodes = mutableMapOf<String, Node>()
 
     private val buildings = mutableListOf<Building>()
-    private val unparsedBuildings = mutableListOf<Building>()
+    private val unparsedBuildings = mutableListOf<Relation>()
 
     fun parseArea(rawArea: RawArea): List<Building> {
         // clear and refill maps
@@ -21,7 +21,7 @@ object Mapper {
         allWays.clear()
         allRelations.clear()
         rawArea.nodes.map { allNodes[it.id] = Node.fromRaw(it) }
-        rawArea.ways.map { allWays[it.id] = Way.fromRaw(it, allNodes) }
+        rawArea.ways.map { allWays[it.id] = Way.fromRaw(it) }
         rawArea.relations.map { allRelations[it.id] = Relation.fromRaw(it) }
 
         // fetch missing stuff
@@ -34,7 +34,7 @@ object Mapper {
 
         logger.debug("Parsed area into ${buildings.size} buildings with a total of " +
                 "${buildings.map { it.rooms }.size} ways/rooms; ${buildings.map { it.floors }.size} relations/floors and " +
-                "${buildings.map { it.indoorObjects.size + it.rooms.map { it.nodes.size }.sum() }.sum()} nodes")
+                "${buildings.map { it.indoorObjects.size + it.rooms.map { it.toOsm().nodeReferences.size }.sum() }.sum()} nodes")
         logger.warn("Could not parse ${unparsedBuildings.size} buildings")
         return buildings
     }
@@ -67,7 +67,7 @@ object Mapper {
                 }
             }
             fetchNodes(missingNodes)
-            for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay, allNodes)
+            for (rawWay in wayList) allWays[rawWay.id] = Way.fromRaw(rawWay)
         }
         fetchNodes(missingNodes)
         if (missingRelations.isNotEmpty()) {
@@ -169,50 +169,20 @@ object Mapper {
     }
 
     /**
-     * Parses all [Relation]s that represent buildings into a [Building]
+     * Parses all [Relation]s that represent buildings into a [Building] POJO
      */
     private fun parseBuildingRel() {
         val buildingRelations = getAllBuildingRel()
         for (relation in buildingRelations) {
-            val building = Building(relation.id)
-            val contained = getContainedElements(relation)
-            building.originalNodes = contained.first.map { it.deepCopy() }
-            building.originalWays = contained.second.map { it.deepCopy() }
-            building.originalRelations = contained.third.map { it.deepCopy() }
+            val building = Building.fromOsm(relation, allNodes, allWays)
 
-            for ((tag, value) in relation.additionalTags.entries) {
-                when (tag) {
-                    "building:max_level" -> building.maxLevel = value.toIntOrNull()
-                    "building:min_level" -> {
-                        building.minLevel = value.toIntOrNull()
-                        // keep tag since it's used not only by indoorOSM
-                        building.additionalTags["building:min_level"] = value
-                    }
-                    "name" -> building.name = value
-                    "height" -> building.height = value.toFloatOrNull()
-                    else -> building.additionalTags[tag] = value
-                }
-            }
-
-            for (member in relation.nodeMembers) {
-                if (member.role == "entrance") {
-                    // todo this is a door
-                    val door = allNodes[member.ref]!!
+            if (building != null) {
+                for (member in relation.relationMembers) {
+                    parseFloor(allRelations[member.ref]!!, building)
                 }
 
-            }
-
-            for (member in relation.wayMembers) {
-                if (building.mainWay == null) building.mainWay = allWays[member.ref]
-                else logger.info("Multiple mainWays for building-relation ${relation.id}")
-            }
-
-            for (member in relation.relationMembers) {
-                parseFloor(allRelations[member.ref]!!, building)
-            }
-
-            if (building.check()) buildings.add(building)
-            else unparsedBuildings.add(building)
+                buildings.add(building)
+            } else unparsedBuildings.add(relation)
         }
 
     }
@@ -224,44 +194,20 @@ object Mapper {
      * @param building the [Building] to add the [Floor] to
      */
     private fun parseFloor(relation: Relation, building: Building) {
-        val floor = Floor(relation.id)
-
-        // todo floorRef parsing
-
-        for ((tag, value) in relation.additionalTags.entries) {
-            when (tag) {
-                "level" -> floor.level = value.toIntOrNull()
-                "height" -> floor.height = value.toFloatOrNull()
-                "name" -> floor.name = value
-                else -> floor.additionalTags[tag] = value
-            }
-        }
+        val floor = Floor.fromOsm(relation, allNodes, allWays) ?: return
 
         for (member in relation.nodeMembers) {
-            if (floor.level == null) {
-                logger.warn("Cannot parse node member ${member.ref}: floor has no level")
-            } else {
-                val tmp = allNodes[member.ref]!!
-                parseIndoorObject(tmp, floor.level!!, building)
-            }
+            parseIndoorObject(allNodes[member.ref]!!, floor.level, building)
         }
 
         for (member in relation.wayMembers) {
-            if (floor.level == null) {
-                logger.warn("Cannot parse room ${member.ref}: floor has no level")
+            val way = allWays[member.ref]!!
+            if ("level:usage" in way.additionalTags.keys) {
+                continue
             } else {
-                val way = allWays[member.ref]!!
-                if ("level:usage" in way.additionalTags.keys) {
-                    floor.usages[way.additionalTags["level:usage"]!!] = way
-                } else {
-                    when(member.role){
-                        "buildingpart" -> parseRoom(way, floor.level!!, building)
-                        "shell" -> floor.shell = way
-                        else -> logger.info("Unrecognized member role in floor ${floor.id}: '${member.role}'")
-                    }
-
-                }
+                parseRoom(way, floor.level, building)
             }
+
         }
 
         for (member in relation.relationMembers) {
@@ -269,20 +215,11 @@ object Mapper {
             for (relationMember in rel.wayMembers) {
                 when (relationMember.role) {
                     "outer" -> building.outline = allWays[relationMember.ref]!!
-                    "inner" -> {
-                        if (!allWays.containsKey(relationMember.ref)) {
-                            logger.warn("FATAL: Could not find ${relationMember.ref} in allWays... oh nooo")
-                        } else {
-                            building.innerline = allWays[relationMember.ref]!!
-                        }
-                    }
+                    "inner" -> building.innerline = allWays[relationMember.ref]!!
                 }
             }
         }
-
-        if (floor.check()) {
-            building.floors.add(floor)
-        }
+        building.floors.add(floor)
     }
 
     /**
@@ -293,10 +230,8 @@ object Mapper {
      * @param building the [Building] to add the [IndoorObject] to
      */
     private fun parseIndoorObject(node: Node, level: Int, building: Building) {
-        val indoorObject = IndoorObject(node.id, node.latitude, node.longitude, level)
-        indoorObject.additionalTags.putAll(node.additionalTags)
-
-        if (indoorObject.check()) building.indoorObjects.add(indoorObject)
+        val indoorObject = IndoorObject.fromOsm(node, level) ?: return
+        building.indoorObjects.add(indoorObject)
     }
 
     /**
@@ -306,8 +241,9 @@ object Mapper {
      * @param building the [Building] to add the [LevelConnection] to
      */
     private fun parseLevelConnections(way: Way, building: Building) {
-        val levelConnection = LevelConnection(way.id)
-        if (levelConnection.check()) building.connections.add(levelConnection)
+        return
+        val levelConnection = LevelConnection.fromOsm(way) ?: return
+        building.connections.add(levelConnection)
     }
 
     /**
@@ -318,43 +254,16 @@ object Mapper {
      * @param building the [Building] to add the [Floor] to
      */
     private fun parseRoom(way: Way, level: Int, building: Building) {
-        val room = Room(way.id)
-        room.level = level
-        for (subsection in way.subsections) {
-            subsection.node1.additionalTags["level"] = level.toString()
-            subsection.node2.additionalTags["level"] = level.toString()
-            room.subsections.add(subsection)
-        }
+        val room = Room.fromOsm(way, level, allNodes)?: return
 
         for ((key, value) in way.additionalTags.entries) {
-            when (key) {
-                "level" -> room.level = value.toIntOrNull()
-                "height" -> room.height = value.toFloatOrNull()
-                "name" -> room.name = value
-                "ref" -> room.ref = value
-                "buildingpart" -> {
-                    when (value) {
-                        "corridor" -> room.indoorTag = IndoorTag.CORRIDOR
-                        "room" -> room.indoorTag = IndoorTag.ROOM
-                        "hall" -> room.indoorTag = IndoorTag.AREA
-                        "verticalpassage" -> {
-                            parseLevelConnections(way, building)
-                            return
-                        }
-                        "shell" -> {
-                            room.outline = way
-                            return
-                        }
-                        else -> logger.info("Unrecognized building part/indoor tag in room-way ${way.id}: '${value}'")
-                    }
-                }
-                else -> room.additionalTags[key] = value
+            if (key == "buildingpart" && value == "verticalpassage"){
+                parseLevelConnections(way, building)
+                return
             }
         }
 
-        if (room.check()) {
-            building.rooms.add(room)
-        }
+        building.rooms.add(room)
     }
 
     fun getContainedElements(relation: Relation): Triple<List<Node>, List<Way>, List<Relation>> {
@@ -388,7 +297,7 @@ object Mapper {
     }
 
     fun getContainedElements(way: Way): List<Node> {
-        return way.nodes
+        return way.nodeReferences.map { allNodes[it.ref]!! }
     }
 
     fun exportBuildings() {
@@ -399,7 +308,9 @@ object Mapper {
 
         // Todo implement diff calculation
         for (building in buildings) {
-            val resultingOsmElements = getContainedElements(building.toRelation())
+            val buildingAsOsmRel = building.toOsm()
+            //val resultingOsmElements = getContainedElements(buildingAsOsmRel)
+            val resultingOsmElements = building.getContainedElements()
             val nodes = resultingOsmElements.first
             val ways = resultingOsmElements.second
             val relations = resultingOsmElements.third
@@ -409,29 +320,47 @@ object Mapper {
             val originalWayIds = building.originalWays.map { it.id }.toSet()
             val originalRelationIds = building.originalRelations.map { it.id }.toSet()
 
-            for (node in nodes) { if (node.id !in originalNodeIds) create.nodes.add(node.toRawNode()) }
-            for (way in ways) { if (way.id !in originalWayIds) create.ways.add(way.toRawWay()) }
-            for (relation in relations) { if (relation.id !in originalRelationIds) create.relations.add(relation.toRawRelation()) }
+            for (node in nodes) {
+                if (node.id !in originalNodeIds) create.nodes.add(node.toRaw())
+            }
+            for (way in ways) {
+                if (way.id !in originalWayIds) create.ways.add(way.toRaw())
+            }
+            for (relation in relations) {
+                if (relation.id !in originalRelationIds) create.relations.add(relation.toRaw())
+            }
             osmChange.create = create
             logger.info("${create.nodes.size} nodes, ${create.ways.size} ways, ${create.relations.size} relations that got created")
-
+            continue
             // populate delete elements
             val newNodeIds = nodes.map { it.id }.toSet()
             val newWayIds = nodes.map { it.id }.toSet()
-            val newRelationIds = nodes.map { it.id}.toSet()
+            val newRelationIds = nodes.map { it.id }.toSet()
 
-            for (node in building.originalNodes) { if (node.id !in newNodeIds) delete.nodes.add(node.toRawNode()) }
-            for (way in building.originalWays) { if (way.id !in newWayIds) delete.ways.add(way.toRawWay()) }
-            for (relation in building.originalRelations) { if (relation.id !in newRelationIds) delete.relations.add(relation.toRawRelation()) }
+            for (node in building.originalNodes) {
+                if (node.id !in newNodeIds) delete.nodes.add(node.toRaw())
+            }
+            for (way in building.originalWays) {
+                if (way.id !in newWayIds) delete.ways.add(way.toRaw())
+            }
+            for (relation in building.originalRelations) {
+                if (relation.id !in newRelationIds) delete.relations.add(relation.toRaw())
+            }
             osmChange.delete = delete
             logger.info("${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
 
             // populate modify elements
             // currently we assume everything inside a building that's not created or deleted was modified
             // ToDo for commiting a new changeset metadata as changeset, version, ... needs to be updated
-            for (node in nodes) { if (node.id in originalNodeIds) modify.nodes.add(node.toRawNode()) }
-            for (way in ways) { if (way.id in originalWayIds) modify.ways.add(way.toRawWay()) }
-            for (relation in relations) { if (relation.id in originalRelationIds) modify.relations.add(relation.toRawRelation()) }
+            for (node in nodes) {
+                if (node.id in originalNodeIds) modify.nodes.add(node.toRaw())
+            }
+            for (way in ways) {
+                if (way.id in originalWayIds) modify.ways.add(way.toRaw())
+            }
+            for (relation in relations) {
+                if (relation.id in originalRelationIds) modify.relations.add(relation.toRaw())
+            }
             osmChange.modify = modify
             logger.info("${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
