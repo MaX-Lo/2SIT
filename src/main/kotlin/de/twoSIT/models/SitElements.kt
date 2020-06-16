@@ -45,7 +45,7 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
                 return null
             }
             var connectionType: LevelConnectionType? = null
-            when (element.additionalTags["buildingpart:verticalpassage"]){
+            when (element.additionalTags["buildingpart:verticalpassage"]) {
                 "stairway" -> connectionType = LevelConnectionType.STAIRS
                 "elevator" -> connectionType = LevelConnectionType.ELEVATOR
             }
@@ -63,7 +63,7 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
             }
             val floorRangeOsm = element.additionalTags["buildingpart:verticalpassage:floorrange"]!!
             val levels = Regex("(?<=\\s|^)[-+]?\\d+(?=\\s|\$)").findAll(floorRangeOsm).map { it.value.toInt() }.toMutableList()
-            if (levels.isEmpty()){
+            if (levels.isEmpty()) {
                 logger.warn("Could not parse Way ${element.id} to LevelConnection: No FloorRange recognized " +
                         "'${element.additionalTags["buildingpart:verticalpassage:floorrange"]}' " +
                         "('buildingpart:verticalpassage:floorrange')")
@@ -73,19 +73,44 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
 
             val levelRange = IntRange(levels.min()!!, levels.max()!!).toMutableList()
             val nodes = mutableListOf<IndoorObject>()
-            for (nodeRef in element.nodeReferences){
-                val indoorObject = IndoorObject.fromOsm(allNodes[nodeRef.ref]!!, levelRange)?: continue
+            for (nodeRef in element.nodeReferences) {
+                val indoorObject = IndoorObject.fromOsm(allNodes[nodeRef.ref]!!, levelRange) ?: continue
                 nodes.add(indoorObject)
             }
-            return LevelConnection(element.id, levels, nodes, IndoorTag.ROOM, connectionType, element.additionalTags)
+
+            val indoorTag: IndoorTag = if (element.additionalTags.containsKey("door") && element.additionalTags["door"] == "no")
+                IndoorTag.AREA
+            else
+                IndoorTag.ROOM
+
+            return LevelConnection(element.id, levels, nodes, indoorTag, connectionType, element.additionalTags)
         }
+    }
+
+    fun isDuplicate(other: LevelConnection): Boolean {
+        for (node in nodes) {
+            var foundProxy = false
+            for (otherNode in other.nodes) {
+                if (node.inProximity(otherNode)) {
+                    foundProxy = true
+                    break
+                }
+            }
+            if (!foundProxy) return false
+        }
+        if (levels.sort() != other.levels.sort()) return false
+        return true
+    }
+
+    fun merge(other: LevelConnection) {
+        additionalTags.putAll(other.additionalTags)
     }
 
     override fun toOsm(): Way {
         val tags = mutableMapOf<String, String>()
         tags.putAll(additionalTags)
 
-        when (levelConnectionType){
+        when (levelConnectionType) {
             LevelConnectionType.CONVEYOR -> {
                 tags["stairs"] = "yes"
                 tags["conveying"] = "yes"
@@ -94,7 +119,7 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
             LevelConnectionType.STAIRS -> tags["stairs"] = "yes"
         }
 
-        when (indoorTag){
+        when (indoorTag) {
             IndoorTag.ROOM -> tags["indoor"] = "room"
             IndoorTag.AREA -> tags["indoor"] = "area"
         }
@@ -156,7 +181,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
 
             val nodes = element.nodeReferences.map { allNodes[it.ref]!! }
             val indoorObjects = mutableListOf<IndoorObject>()
-            for (node in nodes){
+            for (node in nodes) {
                 val obj = IndoorObject.fromOsm(node, mutableListOf(floorLevel))
                 if (obj == null) {
                     logger.warn("Could not parse way ${element.id} to Room: Parse error on Node '${node.id}'")

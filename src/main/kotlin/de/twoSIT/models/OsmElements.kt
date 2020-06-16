@@ -71,7 +71,6 @@ open class Node(id: String, var latitude: Double, var longitude: Double, additio
         AbstractOsmElement(id, additionalTags) {
 
     companion object {
-
         fun fromRaw(rawNode: RawNode): Node {
             val additionalTags = mutableMapOf<String, String>()
             for (tag in rawNode.tags) {

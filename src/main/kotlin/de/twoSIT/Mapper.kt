@@ -181,6 +181,20 @@ object Mapper {
                     parseFloor(allRelations[member.ref]!!, building)
                 }
 
+                // remove LevelConnections that are duplicates of each other on each level
+                val toRemoveConns = mutableListOf<LevelConnection>()
+                for (levelConn in building.connections) {
+                    for (levelConn1 in building.connections) {
+                        if (levelConn === levelConn1) continue
+                        if (levelConn in toRemoveConns) continue
+                        if (levelConn.isDuplicate(levelConn1)) {
+                            levelConn.merge(levelConn1)
+                            toRemoveConns.add(levelConn1)
+                        }
+                    }
+                }
+                building.connections.removeAll(toRemoveConns)
+
                 buildings.add(building)
             } else unparsedBuildings.add(relation)
         }
@@ -254,13 +268,13 @@ object Mapper {
      */
     private fun parseRoom(way: Way, level: Int, building: Building) {
         for ((key, value) in way.additionalTags.entries) {
-            if (key == "buildingpart" && value == "verticalpassage"){
+            if (key == "buildingpart" && value == "verticalpassage") {
                 parseLevelConnections(way, building)
                 return
             }
         }
 
-        val room = Room.fromOsm(way, level, allNodes)?: return
+        val room = Room.fromOsm(way, level, allNodes) ?: return
         building.rooms.add(room)
     }
 
