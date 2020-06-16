@@ -44,14 +44,25 @@ object Converter {
         nodesLevelMap.clear()
         roomsLevelMap.clear()
 
+        val x = nodesLevelMap
+        val y = roomsLevelMap
+
         val allNodes = mutableSetOf<IndoorObject>()
         building.rooms.map { allNodes.addAll(it.nodes) }
         building.connections.map { allNodes.addAll(it.nodes) }
         for (node in allNodes) {
-            node.levels.map { nodesLevelMap.getValue(it).add(node) }
+            for (level in node.levels){
+                val tmp = nodesLevelMap.getValue(level)
+                tmp.add(node)
+                nodesLevelMap[level] = tmp
+            }
         }
 
-        building.rooms.map { roomsLevelMap.getValue(it.level).add(it) }
+        for (room in building.rooms){
+            val tmp = roomsLevelMap.getValue(room.level)
+            tmp.add(room)
+            roomsLevelMap[room.level] = tmp
+        }
 
         logger.debug("Found a total of ${nodesLevelMap.size} levels and ${nodesLevelMap.map { it.value }.size} nodes")
         for (level in nodesLevelMap.keys) {
