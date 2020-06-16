@@ -2,6 +2,7 @@ package de.twoSIT
 
 import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
+import kotlin.math.log
 
 
 private val logger = getLogger(Mapper::class.java)
@@ -308,8 +309,6 @@ object Mapper {
         for (building in buildings) {
             logger.info("Building ${building.id} backparsing result")
 
-            val buildingAsOsmRel = building.toOsm()
-            //val resultingOsmElements = getContainedElements(buildingAsOsmRel)
             val resultingOsmElements = building.getContainedElements()
             val nodes = resultingOsmElements.first
             val ways = resultingOsmElements.second
@@ -346,7 +345,8 @@ object Mapper {
             for (relation in building.originalRelations) {
                 if (relation.id !in newRelationIds) delete.relations.add(relation.toRaw())
             }
-            osmChange.delete = delete
+            // FixMe this stops josm from showing ways to us - do we delete to much?
+            //osmChange.delete = delete
             logger.info("\t${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
 
             // populate modify elements
@@ -361,7 +361,9 @@ object Mapper {
             for (relation in relations) {
                 if (relation.id in originalRelationIds) modify.relations.add(relation.toRaw())
             }
-            osmChange.modify = modify
+            //osmChange.modify = modify
+            osmChange.create.ways.addAll(modify.ways)
+            osmChange.create.nodes.addAll(modify.nodes)
             logger.info("\t${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
 

@@ -262,7 +262,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
     companion object {
         // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
-        private const val proximityThreshold = 0.2 // meters
+        private const val proximityThreshold = 0.5 // meters
 
         fun fromRaw(element: RawNode, levels: MutableList<Int>): IndoorObject? {
             return fromOsm(Node.fromRaw(element), levels)
