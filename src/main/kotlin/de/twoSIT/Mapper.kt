@@ -308,6 +308,8 @@ object Mapper {
 
         // Todo implement diff calculation
         for (building in buildings) {
+            logger.info("Building ${building.id} backparsing result")
+
             val buildingAsOsmRel = building.toOsm()
             //val resultingOsmElements = getContainedElements(buildingAsOsmRel)
             val resultingOsmElements = building.getContainedElements()
@@ -330,7 +332,7 @@ object Mapper {
                 if (relation.id !in originalRelationIds) create.relations.add(relation.toRaw())
             }
             osmChange.create = create
-            logger.info("${create.nodes.size} nodes, ${create.ways.size} ways, ${create.relations.size} relations that got created")
+            logger.info("\t${create.nodes.size} nodes, ${create.ways.size} ways, ${create.relations.size} relations that got created")
 
             // populate delete elements
             val newNodeIds = nodes.map { it.id }.toSet()
@@ -347,7 +349,7 @@ object Mapper {
                 if (relation.id !in newRelationIds) delete.relations.add(relation.toRaw())
             }
             osmChange.delete = delete
-            logger.info("${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
+            logger.info("\t${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
 
             // populate modify elements
             // currently we assume everything inside a building that's not created or deleted was modified
@@ -362,7 +364,7 @@ object Mapper {
                 if (relation.id in originalRelationIds) modify.relations.add(relation.toRaw())
             }
             osmChange.modify = modify
-            logger.info("${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
+            logger.info("\t${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
 
         osmChange.createExportFile()
