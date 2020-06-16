@@ -331,7 +331,7 @@ object Mapper {
             }
             osmChange.create = create
             logger.info("${create.nodes.size} nodes, ${create.ways.size} ways, ${create.relations.size} relations that got created")
-            continue
+
             // populate delete elements
             val newNodeIds = nodes.map { it.id }.toSet()
             val newWayIds = nodes.map { it.id }.toSet()

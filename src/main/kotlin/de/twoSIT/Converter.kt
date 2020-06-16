@@ -142,12 +142,16 @@ object Converter {
         for (node in nodesOnLevel) {
             val nodesNearby = mutableSetOf<IndoorObject>()
             for (node1 in nodesOnLevel) {
-                if (node === node1) continue
+                if (node === node1) { continue }
                 if (node.inProximity(node1)) {
                     nodesNearby.add(node1)
                 }
             }
 
+            if (nodesNearby.isEmpty()) { continue }
+
+            // if a nearby node is already processed and has therefore already a set in nodesToMerge the sets
+            // need to be merged
             val setsOfNearbyNodes = mutableSetOf<MutableSet<IndoorObject>>()
             val nodesNotListedYet = mutableSetOf<IndoorObject>()
             for (nodeNearby in nodesNearby) {
@@ -169,6 +173,7 @@ object Converter {
             val unitedSet = mutableSetOf<IndoorObject>()
             setsOfNearbyNodes.add(nodesNotListedYet)
             setsOfNearbyNodes.map { unitedSet.addAll(it) }
+            unitedSet.add(node)
             nodesToMerge.add(unitedSet)
         }
         return nodesToMerge
