@@ -287,7 +287,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
     companion object {
         // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
-        private const val proximityThreshold = 0.5 // meters
+        private const val proximityThreshold = 0.4 // meters
 
         fun fromRaw(element: RawNode, levels: MutableList<Int>): IndoorObject? {
             return fromOsm(Node.fromRaw(element), levels)
@@ -477,7 +477,8 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
         val containedNodes = indoorObjects.map { it.toOsm() }.toMutableList()
         containedNodes.addAll(entrances.map { it.toOsm() })
 
-        val containedWays = rooms.map { it.toOsm() }
+        val containedWays = rooms.map { it.toOsm() }.toMutableList()
+        containedWays.addAll(connections.map { it.toOsm() })
         rooms.map { containedNodes.addAll(it.nodes.map { it.toOsm() }) }
 
         val containedRelations = floors.map { it.toOsm() }
@@ -515,33 +516,5 @@ data class WallSection(var start: IndoorObject, var end: IndoorObject) {
         val projectionPoint = IndoorObject(IdGenerator.getNewId(), latitude, longitude, start.levels, additionalTags)
 
         return Pair(projectionPoint, t)
-    }
-
-    fun split(middleNode: IndoorObject): WallSection {
-        val tmp = end.deepCopy()
-        end = middleNode
-        return WallSection(middleNode, tmp)
-    }
-
-    fun getMerged(other: WallSection): WallSection {
-        return if (start.inProximity(other.start)) {
-            WallSection(start.getMerged(other.start), end.getMerged(other.end))
-        } else {
-            WallSection(start.getMerged(other.end), end.getMerged(other.start))
-        }
-    }
-
-    fun replaceNode(old: IndoorObject, new: IndoorObject) {
-        when (old) {
-            start -> {
-                start = new
-            }
-            end -> {
-                end = new
-            }
-            else -> {
-                logger.warn("$old is not in this subsection...")
-            }
-        }
     }
 }
