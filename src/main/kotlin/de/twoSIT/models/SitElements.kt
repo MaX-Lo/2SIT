@@ -28,25 +28,83 @@ abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap
 }
 
 
-class LevelConnection(id: String, val levels: MutableList<Int>, val doors: MutableList<IndoorObject>,
+class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: MutableList<IndoorObject>,
                       val indoorTag: IndoorTag, val levelConnectionType: LevelConnectionType,
                       additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags) {
     companion object {
-        fun fromRaw(element: RawRelation): LevelConnection? {
-            throw NotImplementedError()
+        fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>): LevelConnection? {
+            return fromOsm(Way.fromRaw(element), allNodes)
         }
 
-        fun fromOsm(element: Way): LevelConnection? {
-            throw NotImplementedError()
+        fun fromOsm(element: Way, allNodes: MutableMap<String, Node>): LevelConnection? {
+            if (element.additionalTags.containsKey("buildingpart")) element.additionalTags.remove("buildingpart")
+
+            if (!element.additionalTags.containsKey("buildingpart:verticalpassage")) {
+                logger.warn("Could not parse Way ${element.id} to LevelConnection: No LevelConnectionType " +
+                        "('buildingpart:verticalpassage')")
+                return null
+            }
+            var connectionType: LevelConnectionType? = null
+            when (element.additionalTags["buildingpart:verticalpassage"]){
+                "stairway" -> connectionType = LevelConnectionType.STAIRS
+                "elevator" -> connectionType = LevelConnectionType.ELEVATOR
+            }
+            if (connectionType == null) {
+                logger.warn("Could not parse Way ${element.id} to LevelConnection: Invalid LevelConnectionType " +
+                        "'${element.additionalTags["buildingpart:verticalpassage"]}' ('buildingpart:verticalpassage')")
+                return null
+            }
+            element.additionalTags.remove("buildingpart:verticalpassage")
+
+            if (!element.additionalTags.containsKey("buildingpart:verticalpassage:floorrange")) {
+                logger.warn("Could not parse Way ${element.id} to LevelConnection: No FloorRange " +
+                        "('buildingpart:verticalpassage:floorrange')")
+                return null
+            }
+            val floorRangeOsm = element.additionalTags["buildingpart:verticalpassage:floorrange"]!!
+            val levels = Regex("(?<=\\s|^)[-+]?\\d+(?=\\s|\$)").findAll(floorRangeOsm).map { it.value.toInt() }.toMutableList()
+            if (levels.isEmpty()){
+                logger.warn("Could not parse Way ${element.id} to LevelConnection: No FloorRange recognized " +
+                        "'${element.additionalTags["buildingpart:verticalpassage:floorrange"]}' " +
+                        "('buildingpart:verticalpassage:floorrange')")
+                return null
+            }
+            element.additionalTags.remove("buildingpart:verticalpassage:floorrange")
+
+            val levelRange = IntRange(levels.min()!!, levels.max()!!).toMutableList()
+            val nodes = mutableListOf<IndoorObject>()
+            for (nodeRef in element.nodeReferences){
+                val indoorObject = IndoorObject.fromOsm(allNodes[nodeRef.ref]!!, levelRange)?: continue
+                nodes.add(indoorObject)
+            }
+            return LevelConnection(element.id, levels, nodes, IndoorTag.ROOM, connectionType, element.additionalTags)
         }
     }
 
-    override fun toOsm(): AbstractOsmElement {
-        TODO("Not yet implemented")
+    override fun toOsm(): Way {
+        val tags = mutableMapOf<String, String>()
+        tags.putAll(additionalTags)
+
+        when (levelConnectionType){
+            LevelConnectionType.CONVEYOR -> {
+                tags["stairs"] = "yes"
+                tags["conveying"] = "yes"
+            }
+            LevelConnectionType.ELEVATOR -> tags["highway"] = "elevator"
+            LevelConnectionType.STAIRS -> tags["stairs"] = "yes"
+        }
+
+        when (indoorTag){
+            IndoorTag.ROOM -> tags["indoor"] = "room"
+            IndoorTag.AREA -> tags["indoor"] = "area"
+        }
+        tags["level"] = "${levels.min()}-${levels.max()}"
+        val nodeRefs = nodes.map { it.toOsm().toNodeReference() }.toMutableList()
+        return Way(id, nodeRefs, tags)
     }
 
     override fun toRaw(): RawAbstractElement {
-        TODO("Not yet implemented")
+        return toOsm().toRaw()
     }
 
 }
@@ -83,8 +141,6 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
                             "corridor" -> indoorTag = IndoorTag.CORRIDOR
                             "room" -> indoorTag = IndoorTag.ROOM
                             "hall" -> indoorTag = IndoorTag.AREA
-                            "verticalpassage" -> {
-                            }
                             else -> logger.info("Unrecognized IndoorTag '${value}' in Way ${element.id}")
                         }
                     }
@@ -101,7 +157,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
             val nodes = element.nodeReferences.map { allNodes[it.ref]!! }
             val indoorObjects = mutableListOf<IndoorObject>()
             for (node in nodes){
-                val obj = IndoorObject.fromOsm(node, floorLevel)
+                val obj = IndoorObject.fromOsm(node, mutableListOf(floorLevel))
                 if (obj == null) {
                     logger.warn("Could not parse way ${element.id} to Room: Parse error on Node '${node.id}'")
                     return null
@@ -201,21 +257,21 @@ class Floor(id: String, val level: Int, additionalTags: MutableMap<String, Strin
     }
 }
 
-class IndoorObject(id: String, val latitude: Double, val longitude: Double, val level: Int, additionalTags: MutableMap<String, String>) :
+class IndoorObject(id: String, val latitude: Double, val longitude: Double, val levels: MutableList<Int>, additionalTags: MutableMap<String, String>) :
         AbstractSitElement(id, additionalTags) {
 
     companion object {
         // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
         private const val proximityThreshold = 0.2 // meters
 
-        fun fromRaw(element: RawNode, level: Int): IndoorObject? {
-            return fromOsm(Node.fromRaw(element), level)
+        fun fromRaw(element: RawNode, levels: MutableList<Int>): IndoorObject? {
+            return fromOsm(Node.fromRaw(element), levels)
         }
 
-        fun fromOsm(element: Node, level: Int): IndoorObject? {
+        fun fromOsm(element: Node, levels: MutableList<Int>): IndoorObject? {
             if (element.additionalTags.containsKey("door"))
                 print(element)
-            return IndoorObject(element.id, element.latitude, element.longitude, level, element.additionalTags)
+            return IndoorObject(element.id, element.latitude, element.longitude, levels, element.additionalTags)
         }
 
         fun getMerged(others: Iterable<IndoorObject>): IndoorObject {
@@ -243,7 +299,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
-            val level = othersAsList[0].level
+            val level = othersAsList[0].levels
 
             return IndoorObject(IdGenerator.getNewId(), latitude, longitude, level, additionalTags)
         }
@@ -256,7 +312,13 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
     override fun toOsm(): Node {
         val node = Node(id, latitude, longitude, additionalTags)
-        node.additionalTags["level"] = level.toString()
+
+        val levelString: String = if (levels.size == 1)
+            levels[0].toString()
+        else
+            "${levels.min()}-${levels.max()}"
+
+        node.additionalTags["level"] = levelString
         return node
     }
 
@@ -340,7 +402,7 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
                 if (member.role == "entrance") {
                     // todo this is a door
                     // fixme this is always level 0
-                    IndoorObject.fromOsm(allNodes[member.ref]!!, 0)?.let { entrances.add(it) }
+                    IndoorObject.fromOsm(allNodes[member.ref]!!, mutableListOf(0))?.let { entrances.add(it) }
                 }
             }
 
@@ -425,7 +487,7 @@ data class WallSection(var start: IndoorObject, var end: IndoorObject) {
         val additionalTags = mutableMapOf<String, String>()
         additionalTags.putAll(node.additionalTags)
         additionalTags.putAll(additionalTags)
-        val projectionPoint = IndoorObject(IdGenerator.getNewId(), latitude, longitude, start.level, additionalTags)
+        val projectionPoint = IndoorObject(IdGenerator.getNewId(), latitude, longitude, start.levels, additionalTags)
 
         return Pair(projectionPoint, t)
     }

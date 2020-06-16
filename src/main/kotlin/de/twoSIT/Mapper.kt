@@ -230,7 +230,7 @@ object Mapper {
      * @param building the [Building] to add the [IndoorObject] to
      */
     private fun parseIndoorObject(node: Node, level: Int, building: Building) {
-        val indoorObject = IndoorObject.fromOsm(node, level) ?: return
+        val indoorObject = IndoorObject.fromOsm(node, mutableListOf(level)) ?: return
         building.indoorObjects.add(indoorObject)
     }
 
@@ -241,8 +241,7 @@ object Mapper {
      * @param building the [Building] to add the [LevelConnection] to
      */
     private fun parseLevelConnections(way: Way, building: Building) {
-        return
-        val levelConnection = LevelConnection.fromOsm(way) ?: return
+        val levelConnection = LevelConnection.fromOsm(way, allNodes) ?: return
         building.connections.add(levelConnection)
     }
 
@@ -254,8 +253,6 @@ object Mapper {
      * @param building the [Building] to add the [Floor] to
      */
     private fun parseRoom(way: Way, level: Int, building: Building) {
-        val room = Room.fromOsm(way, level, allNodes)?: return
-
         for ((key, value) in way.additionalTags.entries) {
             if (key == "buildingpart" && value == "verticalpassage"){
                 parseLevelConnections(way, building)
@@ -263,6 +260,7 @@ object Mapper {
             }
         }
 
+        val room = Room.fromOsm(way, level, allNodes)?: return
         building.rooms.add(room)
     }
 
