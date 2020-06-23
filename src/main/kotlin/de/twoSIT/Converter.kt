@@ -44,9 +44,6 @@ object Converter {
         nodesLevelMap.clear()
         roomsLevelMap.clear()
 
-        val x = nodesLevelMap
-        val y = roomsLevelMap
-
         val allNodes = mutableSetOf<IndoorObject>()
         building.rooms.map { allNodes.addAll(it.nodes) }
         building.connections.map { allNodes.addAll(it.nodes) }
@@ -79,17 +76,6 @@ object Converter {
     }
 
     /**
-     * This function extracts all [Node]s of all [Room]s.
-     *
-     * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
-     * @return a [MutableSet] of all [Node]s on the level
-     *
-     */
-    private fun getNodesForLevel(roomsOnLevel: MutableSet<Room>): MutableSet<IndoorObject> {
-        return roomsOnLevel.map { it.nodes }.flatten().toMutableSet()
-    }
-
-    /**
      * This function splits a [SubSection] into two following [SubSection]s if a [Node] of any [Room] of the level has a
      * projection-[Node] on the [SubSection], which is close to the [Node] itself.
      *
@@ -116,6 +102,9 @@ object Converter {
                 newNodes.addAll(intersectionNodes)
                 newNodes.add(wallSection.end)
             }
+            val tmp = nodesLevelMap.getValue(level)
+            tmp.addAll(newNodes)
+            nodesLevelMap[level] = tmp
             room.nodes.clear()
             room.nodes.addAll(newNodes)
         }

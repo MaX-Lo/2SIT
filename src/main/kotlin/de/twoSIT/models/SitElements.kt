@@ -324,9 +324,11 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
-            val level = othersAsList[0].levels
 
-            return IndoorObject(IdGenerator.getNewId(), latitude, longitude, level, additionalTags)
+            val levels = mutableSetOf<Int>()
+            others.map { levels.addAll(it.levels) }
+
+            return IndoorObject(IdGenerator.getNewId(), latitude, longitude, levels.toMutableList(), additionalTags)
         }
 
     }
@@ -479,6 +481,7 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
 
         val containedWays = rooms.map { it.toOsm() }.toMutableList()
         containedWays.addAll(connections.map { it.toOsm() })
+        connections.map { containedNodes.addAll(it.nodes.map { it.toOsm() }) }
         rooms.map { containedNodes.addAll(it.nodes.map { it.toOsm() }) }
 
         val containedRelations = floors.map { it.toOsm() }
