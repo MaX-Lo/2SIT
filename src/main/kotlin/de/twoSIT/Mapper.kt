@@ -2,7 +2,6 @@ package de.twoSIT
 
 import de.twoSIT.models.*
 import de.twoSIT.util.getLogger
-import kotlin.math.log
 
 
 private val logger = getLogger(Mapper::class.java)
@@ -183,18 +182,20 @@ object Mapper {
                 }
 
                 // remove LevelConnections that are duplicates of each other on each level
-                val toRemoveConns = mutableListOf<LevelConnection>()
-                for (levelConn in building.connections) {
-                    for (levelConn1 in building.connections) {
-                        if (levelConn === levelConn1) continue
-                        if (levelConn in toRemoveConns) continue
-                        if (levelConn.isDuplicate(levelConn1)) {
-                            levelConn.merge(levelConn1)
-                            toRemoveConns.add(levelConn1)
+                val toRemoveConnections = mutableListOf<LevelConnection>()
+                for (levelConnection1 in building.connections) {
+                    for (levelConnection2 in building.connections) {
+                        if (levelConnection1 === levelConnection2 || levelConnection1 in toRemoveConnections) {
+                            continue
+                        }
+
+                        if (levelConnection1.isDuplicate(levelConnection2)) {
+                            levelConnection1.merge(levelConnection2)
+                            toRemoveConnections.add(levelConnection2)
                         }
                     }
                 }
-                building.connections.removeAll(toRemoveConns)
+                building.connections.removeAll(toRemoveConnections)
 
                 buildings.add(building)
             } else unparsedBuildings.add(relation)
@@ -212,7 +213,7 @@ object Mapper {
         val floor = Floor.fromOsm(relation, allNodes, allWays) ?: return
 
         for (member in relation.nodeMembers) {
-            parseIndoorObject(allNodes[member.ref]!!, floor.level, building)
+            parseIndoorObject(allNodes[member.ref]!!, mutableSetOf(floor.level), building)
         }
 
         for (member in relation.wayMembers) {
@@ -220,9 +221,8 @@ object Mapper {
             if ("level:usage" in way.additionalTags.keys) {
                 continue
             } else {
-                parseRoom(way, floor.level, building)
+                parseRoom(way, mutableSetOf(floor.level), building)
             }
-
         }
 
         for (member in relation.relationMembers) {
@@ -241,11 +241,11 @@ object Mapper {
      * Parses a [Node] that represents a basic indoor object into a [IndoorObject] POJO and adds it to the [building]
      *
      * @param node the [Node] that represents the indoor object
-     * @param level the level the indoor object is on
+     * @param levels the level the indoor object is on
      * @param building the [Building] to add the [IndoorObject] to
      */
-    private fun parseIndoorObject(node: Node, level: Int, building: Building) {
-        val indoorObject = IndoorObject.fromOsm(node, mutableListOf(level)) ?: return
+    private fun parseIndoorObject(node: Node, levels: MutableSet<Float>, building: Building) {
+        val indoorObject = IndoorObject.fromOsm(node, levels) ?: return
         building.indoorObjects.add(indoorObject)
     }
 
@@ -267,7 +267,7 @@ object Mapper {
      * @param level the level the room is in
      * @param building the [Building] to add the [Floor] to
      */
-    private fun parseRoom(way: Way, level: Int, building: Building) {
+    private fun parseRoom(way: Way, level: MutableSet<Float>, building: Building) {
         for ((key, value) in way.additionalTags.entries) {
             if (key == "buildingpart" && value == "verticalpassage") {
                 parseLevelConnections(way, building)
@@ -291,8 +291,10 @@ object Mapper {
 
         for (way in relation.wayMembers) {
             if (allWays.containsKey(way.ref)) {
-                containedNodes.addAll(getContainedElements(allWays[way.ref]!!))
-                containedWays.add(allWays[way.ref]!!)
+                val currWay = allWays[way.ref]!!
+                if (currWay.additionalTags.containsKey("level:usage")) { continue }
+                containedNodes.addAll(getContainedElements(currWay))
+                containedWays.add(currWay)
             }
         }
 
@@ -347,11 +349,11 @@ object Mapper {
 
             // populate delete elements
             val newNodeIds = nodes.map { it.id }.toSet()
-            val newWayIds = nodes.map { it.id }.toSet()
-            val newRelationIds = nodes.map { it.id }.toSet()
+            val newWayIds = ways.map { it.id }.toSet()
+            val newRelationIds = relations.map { it.id }.toSet()
 
             for (node in building.originalNodes) {
-                if (node.id !in newNodeIds) delete.nodes.add(node.toRaw())
+                if (node.id !in newNodeIds) { delete.nodes.add(node.toRaw()) }
             }
             for (way in building.originalWays) {
                 if (way.id !in newWayIds) delete.ways.add(way.toRaw())
@@ -360,7 +362,7 @@ object Mapper {
                 if (relation.id !in newRelationIds) delete.relations.add(relation.toRaw())
             }
             // FixMe this stops josm from showing ways to us - do we delete to much?
-            //osmChange.delete = delete
+            osmChange.delete = delete
             logger.info("\t${delete.nodes.size} nodes, ${delete.ways.size} ways, ${delete.relations.size} relations that got deleted")
 
             // populate modify elements
@@ -375,9 +377,9 @@ object Mapper {
             for (relation in relations) {
                 if (relation.id in originalRelationIds) modify.relations.add(relation.toRaw())
             }
-            //osmChange.modify = modify
-            osmChange.create.ways.addAll(modify.ways)
-            osmChange.create.nodes.addAll(modify.nodes)
+            osmChange.modify = modify
+            //osmChange.create.ways.addAll(modify.ways)
+            //osmChange.create.nodes.addAll(modify.nodes)
             logger.info("\t${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
 

@@ -8,6 +8,8 @@ import de.twoSIT.models.RawWay
 
 // bounding box examples for a buildings mapped as IndoorOSM and SIT
 val indoorArea = Area(49.41689, 8.67180, 49.41969, 8.67695)
+val indoorAreaOneBuilding = Area(49.4184885, 8.6765974, 49.4189534, 8.6772052)
+
 val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 
 // server addresses to easy switch.
@@ -17,7 +19,7 @@ const val officialServer = "https://api.openstreetmap.org/api/0.6/"
 fun main() {
     val requester = Requester.getInstance(officialServer)
 
-    val rawXmlString = requester.requestArea(indoorArea)
+    val rawXmlString = requester.requestArea(indoorAreaOneBuilding)
     val rawArea = RawArea.fromString(rawXmlString)
 
     val buildings = Mapper.parseArea(rawArea)

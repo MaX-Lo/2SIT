@@ -1,18 +1,23 @@
---- Merging Level Connections ---
+## Merging Level Connections
 
 indoorOSM:
 - verticalpassage:floorange:x to y hat alle Level, welche über diese Verbindung erreichbar sind, das heißt aber nicht, dass
-  auf anderen Ebenen das Layout genauso aussieht!
+  auf anderen Ebenen das Layout genauso aussieht! Ebenso heißt das nicht, das Falls eine Level Connection Level 1, 2 und 3 besitzt
+  eine Tür auf Level 2 existieren muss.
 
 - Mapping auf 2 verschiedene Arten:
   1) eigener Weg auf jedem Level der dann einmalig von einer Floor-Relation referenziert wird
   2) Weg der das Outline für mehrere Level beschreibt -> gleicher Weg wird von mehreren Floor-Relation referenziert
+  3) Ein Weg der als verticalpassage:floorange mehrere Level angegeben hat. Floor Relations für die jeweiligen Level enthalten
+     diesen dann aber aus unbekannten Gründen nicht zwangsläufig als Member.
 
 SIT
 - ein Weg der durch den Level Tag angibt, in welchen Leveln er sich alles befindet
 - Tag, welche anderen Level durch diese Verbindung erreichbar sind existiert eigentlich nicht
 
--- Konvertieren --
+## Konvertieren
+Annahme: Der Grundriss einer Level Connection Ändert sich nicht über Etagen
+
 Schritt 1: Aufbauen der Level Connection Liste
 - Alle Level Connections Objekte erstellen. Level ist zunächst nur das Level von dem Floor der die
   Level Connection referenziert.

@@ -8,8 +8,8 @@ class NodeTest {
 
     @Test
     fun testDistanceToSameCoordinates() {
-        val node1 = IndoorObject("1", 10.020134, 10.2356, mutableListOf(1), mutableMapOf())
-        val node2 = IndoorObject("2", 10.020134, 10.2356, mutableListOf(1), mutableMapOf())
+        val node1 = IndoorObject("1", 10.020134, 10.2356, mutableSetOf(1f), mutableMapOf())
+        val node2 = IndoorObject("2", 10.020134, 10.2356, mutableSetOf(1f), mutableMapOf())
 
         assertTrue { node1.distanceTo(node2) == 0.0 }
         assertTrue { node2.distanceTo(node1) == 0.0 }
@@ -17,8 +17,8 @@ class NodeTest {
 
     @Test
     fun testDistanceToDifferentCoordinates() {
-        val node1 = IndoorObject("1", 10.0, 10.0, mutableListOf(1), mutableMapOf())
-        val node2 = IndoorObject("2", 0.0, 0.0, mutableListOf(1), mutableMapOf())
+        val node1 = IndoorObject("1", 10.0, 10.0, mutableSetOf(1f), mutableMapOf())
+        val node2 = IndoorObject("2", 0.0, 0.0, mutableSetOf(1f), mutableMapOf())
 
         assertTrue { node1.distanceTo(node2).roundToInt() == 1568521 }
         assertTrue { node2.distanceTo(node1).roundToInt() == 1568521 }

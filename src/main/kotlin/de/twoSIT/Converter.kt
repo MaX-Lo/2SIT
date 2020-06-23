@@ -19,8 +19,8 @@ approach:
         a.
  */
 object Converter {
-    private val nodesLevelMap = mutableMapOf<Int, MutableSet<IndoorObject>>().withDefault { mutableSetOf() }
-    private val roomsLevelMap = mutableMapOf<Int, MutableSet<Room>>().withDefault { mutableSetOf() }
+    private val nodesLevelMap = mutableMapOf<Float, MutableSet<IndoorObject>>().withDefault { mutableSetOf() }
+    private val roomsLevelMap = mutableMapOf<Float, MutableSet<Room>>().withDefault { mutableSetOf() }
 
     /**
      * Converts a given [Iterable] of [Building]s. This includes the merge of the [Room]s as well as the
@@ -55,10 +55,12 @@ object Converter {
             }
         }
 
-        for (room in building.rooms){
-            val tmp = roomsLevelMap.getValue(room.level)
-            tmp.add(room)
-            roomsLevelMap[room.level] = tmp
+        for (room in building.rooms) {
+            for (level in room.levels) {
+                val tmp = roomsLevelMap.getValue(level)
+                tmp.add(room)
+                roomsLevelMap[level] = tmp
+            }
         }
 
         logger.debug("Found a total of ${nodesLevelMap.size} levels and ${nodesLevelMap.map { it.value }.size} nodes")
@@ -68,7 +70,7 @@ object Converter {
         }
     }
 
-    private fun convertLevel(level: Int) {
+    private fun convertLevel(level: Float) {
         val nodeCount = nodesLevelMap.getValue(level).count()
         insertNodes(level)
         mergeNodes(level)
@@ -81,7 +83,7 @@ object Converter {
      *
      * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
      */
-    private fun insertNodes(level: Int) {
+    private fun insertNodes(level: Float) {
         val nodesOnLevel = nodesLevelMap.getValue(level)
 
         for (room in roomsLevelMap.getValue(level)) {
@@ -110,7 +112,7 @@ object Converter {
         }
     }
 
-    private fun mergeNodes(level: Int) {
+    private fun mergeNodes(level: Float) {
         val nodesToMerge = nodesToMerge(level)
         logger.debug("Merging ${nodesToMerge.map { it.size }.sum()} into ${nodesToMerge.size} nodes")
         replaceNodes(nodesToMerge, level)
@@ -139,7 +141,7 @@ object Converter {
      * e. untie all sets of setsOfNearbyNodes and add the united set to nodesToMerge
      *
      */
-    private fun nodesToMerge(level: Int): MutableSet<MutableSet<IndoorObject>> {
+    private fun nodesToMerge(level: Float): MutableSet<MutableSet<IndoorObject>> {
         val nodesToMerge = mutableSetOf<MutableSet<IndoorObject>>()
         val nodesOnLevel = nodesLevelMap.getValue(level)
         val nodesRoomMap = mutableMapOf<IndoorObject, MutableSet<Room>>().withDefault { mutableSetOf() }
@@ -204,7 +206,7 @@ object Converter {
      * @param roomsOnLevel a [MutableSet] of all [Room]s on the level
      *
      */
-    private fun replaceNodes(nodesToMerge: MutableSet<MutableSet<IndoorObject>>, level: Int) {
+    private fun replaceNodes(nodesToMerge: MutableSet<MutableSet<IndoorObject>>, level: Float) {
         val oldToNewNodes = mutableMapOf<IndoorObject, IndoorObject>()
         for (nodes in nodesToMerge) {
             val merged = IndoorObject.getMerged(nodes)

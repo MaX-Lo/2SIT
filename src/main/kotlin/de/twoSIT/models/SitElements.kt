@@ -21,6 +21,26 @@ enum class IndoorTag {
     ROOM, AREA, WALL, CORRIDOR
 }
 
+fun levelFromStr(levelStr: String): MutableSet<Float> {
+    val levelStrings = levelStr.replace(",", ";").replace(" ", "").split(";")
+    val levels = mutableSetOf<Float>()
+    for (str in levelStrings) {
+        if (str.toFloatOrNull() != null) {
+            levels.add(str.toFloat())
+        } else if (str.contains("to")) {
+            val values = str.split("to").map { it.toInt() }
+            levels.addAll(IntRange(values.min()!!, values.max()!!).toMutableList().map { it.toFloat() }.toSet())
+        } else if (str.contains('-')) {
+            logger.warn("can't parse level str: $str")
+        }
+    }
+    return levels
+}
+
+fun levelToStr(level: MutableSet<Float>): String {
+    return level.toString().replace("[", "").replace("]", "").replace(",", ";")
+}
+
 abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap<String, String>) {
     abstract fun toOsm(): AbstractOsmElement
 
@@ -28,7 +48,7 @@ abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap
 }
 
 
-class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: MutableList<IndoorObject>,
+class LevelConnection(id: String, val levels: MutableSet<Float>, val nodes: MutableList<IndoorObject>,
                       val indoorTag: IndoorTag, val levelConnectionType: LevelConnectionType,
                       additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags) {
     companion object {
@@ -61,8 +81,8 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
                         "('buildingpart:verticalpassage:floorrange')")
                 return null
             }
-            val floorRangeOsm = element.additionalTags["buildingpart:verticalpassage:floorrange"]!!
-            val levels = Regex("(?<=\\s|^)[-+]?\\d+(?=\\s|\$)").findAll(floorRangeOsm).map { it.value.toInt() }.toMutableList()
+            val levels = levelFromStr(element.additionalTags["buildingpart:verticalpassage:floorrange"]!!)
+
             if (levels.isEmpty()) {
                 logger.warn("Could not parse Way ${element.id} to LevelConnection: No FloorRange recognized " +
                         "'${element.additionalTags["buildingpart:verticalpassage:floorrange"]}' " +
@@ -71,10 +91,9 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
             }
             element.additionalTags.remove("buildingpart:verticalpassage:floorrange")
 
-            val levelRange = IntRange(levels.min()!!, levels.max()!!).toMutableList()
             val nodes = mutableListOf<IndoorObject>()
             for (nodeRef in element.nodeReferences) {
-                val indoorObject = IndoorObject.fromOsm(allNodes[nodeRef.ref]!!, levelRange) ?: continue
+                val indoorObject = IndoorObject.fromOsm(allNodes[nodeRef.ref]!!, levels) ?: continue
                 nodes.add(indoorObject)
             }
 
@@ -88,21 +107,28 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
     }
 
     fun isDuplicate(other: LevelConnection): Boolean {
+        if (levels.toSet() != other.levels.toSet()) {
+            return false
+        }
+
         for (node in nodes) {
             var foundProxy = false
             for (otherNode in other.nodes) {
-                if (node.inProximity(otherNode)) {
+                if (node.inProximity(otherNode, 0.6)) { // displacement over multiple levels is higher than default threshold
                     foundProxy = true
                     break
                 }
             }
-            if (!foundProxy) return false
+            if (!foundProxy) {
+                return false
+            }
         }
-        if (levels.sort() != other.levels.sort()) return false
         return true
     }
 
     fun merge(other: LevelConnection) {
+        // ToDo try to merge tags existing in both level connections
+        // ToDo add doors and window nodes if existing
         additionalTags.putAll(other.additionalTags)
     }
 
@@ -123,7 +149,7 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
             IndoorTag.ROOM -> tags["indoor"] = "room"
             IndoorTag.AREA -> tags["indoor"] = "area"
         }
-        tags["level"] = "${levels.min()}-${levels.max()}"
+        tags["level"] = levelToStr(levels)
         val nodeRefs = nodes.map { it.toOsm().toNodeReference() }.toMutableList()
         return Way(id, nodeRefs, tags)
     }
@@ -135,20 +161,20 @@ class LevelConnection(id: String, val levels: MutableList<Int>, val nodes: Mutab
 }
 
 
-class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: MutableList<IndoorObject>,
+class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, val nodes: MutableList<IndoorObject>,
            additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags) {
     var height: Float? = null
     var name: String? = null
     var ref: String? = null
 
     companion object {
-        fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>, level: Int): Room? {
+        fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>, level: String): Room? {
             val way = Way.fromRaw(element)
-            return fromOsm(way, level, allNodes)
+            return fromOsm(way, levelFromStr(level), allNodes)
         }
 
-        fun fromOsm(element: Way, floorLevel: Int, allNodes: MutableMap<String, Node>): Room? {
-            var osmLevel: Int? = null
+        fun fromOsm(element: Way, floorLevel: MutableSet<Float>, allNodes: MutableMap<String, Node>): Room? {
+            var roomLevel = mutableSetOf<Float>()
             var height: Float? = null
             var name: String? = null
             var ref: String? = null
@@ -157,7 +183,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
 
             for ((key, value) in element.additionalTags.entries) {
                 when (key) {
-                    "level" -> osmLevel = value.toIntOrNull()
+                    "level" -> roomLevel = levelFromStr(value)
                     "height" -> height = value.toFloatOrNull()
                     "name" -> name = value
                     "ref" -> ref = value
@@ -173,7 +199,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
                 }
             }
 
-            val roomLevel = osmLevel ?: floorLevel
+            // ToDo is this needed?
             if (indoorTag == null) {
                 logger.warn("Could not parse Way ${element.id} to room: No IndoorTag'")
                 return null
@@ -182,12 +208,15 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
             val nodes = element.nodeReferences.map { allNodes[it.ref]!! }
             val indoorObjects = mutableListOf<IndoorObject>()
             for (node in nodes) {
-                val obj = IndoorObject.fromOsm(node, mutableListOf(floorLevel))
+                val obj = IndoorObject.fromOsm(node, floorLevel)
                 if (obj == null) {
                     logger.warn("Could not parse way ${element.id} to Room: Parse error on Node '${node.id}'")
                     return null
                 }
                 indoorObjects.add(obj)
+            }
+            if (roomLevel.size == 0) {
+                roomLevel = floorLevel
             }
             val room = Room(element.id, roomLevel, indoorTag, indoorObjects, additionalTags)
             room.height = height
@@ -200,7 +229,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
 
     override fun toOsm(): Way {
         val way = Way(id, nodes.map { it.toOsm().toNodeReference() }.toMutableList(), additionalTags)
-        way.additionalTags["level"] = level.toString()
+        way.additionalTags["level"] = levelToStr(levels)
         way.additionalTags["indoorTag"] = indoorTag.toString().toLowerCase()
         if (height != null) way.additionalTags["height"] = height.toString()
         if (name != null) way.additionalTags["name"] = name!!
@@ -214,7 +243,7 @@ class Room(id: String, val level: Int, val indoorTag: IndoorTag, val nodes: Muta
 }
 
 
-class Floor(id: String, val level: Int, additionalTags: MutableMap<String, String>) :
+class Floor(id: String, val level: Float, additionalTags: MutableMap<String, String>) :
         AbstractSitElement(id, additionalTags) {
     var height: Float? = null
     var ref: String? = null
@@ -230,25 +259,25 @@ class Floor(id: String, val level: Int, additionalTags: MutableMap<String, Strin
         }
 
         fun fromOsm(element: Relation, allNodes: MutableMap<String, Node>, allWays: MutableMap<String, Way>): Floor? {
-            var level: Int? = null
+            var level = listOf<Float>()
             var height: Float? = null
             var name: String? = null
-            var ref: String? = null
+            val ref: String? = null
             val additionalTags = mutableMapOf<String, String>()
 
             for ((tag, value) in element.additionalTags.entries) {
                 when (tag) {
-                    "level" -> level = value.toIntOrNull()
+                    "level" -> level = levelFromStr(value).toList()
                     "height" -> height = value.toFloatOrNull()
                     "name" -> name = value
                     else -> additionalTags[tag] = value
                 }
             }
-            if (level == null) {
-                logger.warn("Could not parse Relation ${element.id} to Floor: No level'")
+            if (level.size != 1) {
+                logger.warn("Could not parse Relation ${element.id} to Floor: Should have only one level but has ${level.size}'")
                 return null
             }
-            val floor = Floor(element.id, level, additionalTags)
+            val floor = Floor(element.id, level[0], additionalTags)
             floor.height = height
             floor.name = name
             floor.ref = ref
@@ -258,7 +287,7 @@ class Floor(id: String, val level: Int, additionalTags: MutableMap<String, Strin
                 if ("level:usage" in way.additionalTags.keys)
                     floor.usages[way.additionalTags["level:usage"]!!] = way
                 if (member.role == "shell") {
-                    floor.shell = Room.fromOsm(allWays[member.ref]!!, level, allNodes)
+                    floor.shell = Room.fromOsm(allWays[member.ref]!!, mutableSetOf(level[0]), allNodes)
                 }
             }
 
@@ -282,18 +311,18 @@ class Floor(id: String, val level: Int, additionalTags: MutableMap<String, Strin
     }
 }
 
-class IndoorObject(id: String, val latitude: Double, val longitude: Double, val levels: MutableList<Int>, additionalTags: MutableMap<String, String>) :
+class IndoorObject(id: String, val latitude: Double, val longitude: Double, val levels: MutableSet<Float>, additionalTags: MutableMap<String, String>) :
         AbstractSitElement(id, additionalTags) {
 
     companion object {
         // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
         private const val proximityThreshold = 0.4 // meters
 
-        fun fromRaw(element: RawNode, levels: MutableList<Int>): IndoorObject? {
+        fun fromRaw(element: RawNode, levels: MutableSet<Float>): IndoorObject? {
             return fromOsm(Node.fromRaw(element), levels)
         }
 
-        fun fromOsm(element: Node, levels: MutableList<Int>): IndoorObject? {
+        fun fromOsm(element: Node, levels: MutableSet<Float>): IndoorObject? {
             if (element.additionalTags.containsKey("door"))
                 print(element)
             return IndoorObject(element.id, element.latitude, element.longitude, levels, element.additionalTags)
@@ -325,10 +354,10 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
             val latitude = others.map { it.latitude }.average()
             val longitude = others.map { it.longitude }.average()
 
-            val levels = mutableSetOf<Int>()
+            val levels = mutableSetOf<Float>()
             others.map { levels.addAll(it.levels) }
 
-            return IndoorObject(IdGenerator.getNewId(), latitude, longitude, levels.toMutableList(), additionalTags)
+            return IndoorObject(IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
         }
 
     }
@@ -339,13 +368,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
     override fun toOsm(): Node {
         val node = Node(id, latitude, longitude, additionalTags)
-
-        val levelString: String = if (levels.size == 1)
-            levels[0].toString()
-        else
-            "${levels.min()}-${levels.max()}"
-
-        node.additionalTags["level"] = levelString
+        node.additionalTags["level"] = levelToStr(levels)
         return node
     }
 
@@ -353,8 +376,8 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
         return getMerged(setOf(this, other))
     }
 
-    fun inProximity(other: IndoorObject): Boolean {
-        return distanceTo(other) < proximityThreshold
+    fun inProximity(other: IndoorObject, threshold: Double = proximityThreshold): Boolean {
+        return distanceTo(other) < threshold
     }
 
     fun distanceTo(other: IndoorObject): Double {
@@ -429,7 +452,7 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
                 if (member.role == "entrance") {
                     // todo this is a door
                     // fixme this is always level 0
-                    IndoorObject.fromOsm(allNodes[member.ref]!!, mutableListOf(0))?.let { entrances.add(it) }
+                    IndoorObject.fromOsm(allNodes[member.ref]!!, mutableSetOf(0f))?.let { entrances.add(it) }
                 }
             }
 
