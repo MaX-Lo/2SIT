@@ -42,7 +42,7 @@ fun levelFromStr(levelStr: String): MutableSet<Float> {
 }
 
 fun levelToStr(level: MutableSet<Float>): String {
-    return level.toString().replace("[", "").replace("]", "").replace(",", ";")
+    return level.toString().replace("[", "").replace("]", "").replace(",", ";").replace(".0", "")
 }
 
 abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap<String, String>) {
@@ -51,10 +51,13 @@ abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap
     abstract fun toRaw(): RawAbstractElement
 }
 
+interface WayOwner {
+    val nodes: MutableList<IndoorObject>
+}
 
-class LevelConnection(id: String, val levels: MutableSet<Float>, val nodes: MutableList<IndoorObject>,
+class LevelConnection(id: String, val levels: MutableSet<Float>, override val nodes: MutableList<IndoorObject>,
                       val indoorTag: IndoorTag, val levelConnectionType: LevelConnectionType,
-                      additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags) {
+                      additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags), WayOwner {
     companion object {
         fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>): LevelConnection? {
             return fromOsm(Way.fromRaw(element), allNodes)
@@ -209,8 +212,8 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val nodes: Muta
 }
 
 
-class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, val nodes: MutableList<IndoorObject>,
-           additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags) {
+class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, override val nodes: MutableList<IndoorObject>,
+           additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags), WayOwner {
     var height: Float? = null
     var name: String? = null
     var ref: String? = null
@@ -376,9 +379,6 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
         fun getMerged(others: Iterable<IndoorObject>, threshold: Float = NODE_PROXY_THRESHOLD): IndoorObject {
             val othersAsList = others.toList()
 
-            // FixMe othersAsList is sometimes of size 0 but at least one node should be in each set of to be merged nodes
-            //       could be because how we merge Transitive relations
-
             if (othersAsList.isEmpty()) {
                 logger.info("Can't merge list of size 0")
             }
@@ -532,7 +532,9 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
         if (name != null) relation.additionalTags["name"] = name!!
 
         val nodeMembers = indoorObjects.map { it.toOsm().toMember() }
-        val wayMembers = rooms.map { it.toOsm().toMember() }
+        val wayMembers = rooms.map { it.toOsm().toMember() }.toMutableList()
+        wayMembers.addAll(connections.map { it.toOsm().toMember() })
+
         val relationMembers = floors.map { it.toOsm().toMember() }
         relation.nodeMembers = nodeMembers.toMutableList()
         relation.wayMembers = wayMembers.toMutableList()
@@ -559,11 +561,8 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
 }
 
 data class WallSection(var start: IndoorObject, var end: IndoorObject) {
-    val len = sqrt(abs(end.latitude - start.latitude)) + sqrt(abs(end.longitude - start.longitude))
-
     /**
-     *
-     *     https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point
+     * https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point
      * @param node the [Node] that should be projected
      * @return a [Pair] of the projection [Node] as first and the distance to the [SubSection].node1 as second. The distance is 0 if the projected node is node1 and 1 if it is node2
      * @return null if no projection is found within the [SubSection]

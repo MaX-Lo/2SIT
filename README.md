@@ -36,3 +36,13 @@ Schritt 2: Mergen von Level Connections
 - Reihenfolgebestimmung der Nodes beim Mergen:
     einfach den Node nehmen der, von der Distanz am nächsten dran ist
 - Dies wird für alle LevelConnections gemacht, Ergebnis sollte eine Liste nicht weiter verringerbarer LevelConnections sein
+
+## New Approach
+Es hat sich gezeigt, das horizontales Merging vor Vertikalen Merging erfolgen sollte. Damit dies möglich ist müssen
+Level Connections Vorverarbeitet werden. 
+## populate Level Connections
+- man nehme eine Level Connection und schaut sich die FloorRange an:
+  - für jedes in verticalpassage:floorange  referenzierte Level schaut man jetzt, ob es bereits in der dazugehörigen
+    Floor Relation bereits eine VerticalPassage gibt, welche für die "einfachen" Nodes ein positives "inProximity" 
+    Ergebnis erziehlt
+  - ist das nicht der Fall wird die momentane LevelConnection samt Nodes Du

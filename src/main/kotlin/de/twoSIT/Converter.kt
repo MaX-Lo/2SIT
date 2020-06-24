@@ -20,7 +20,7 @@ approach:
  */
 object Converter {
     private val nodesLevelMap = mutableMapOf<Float, MutableSet<IndoorObject>>().withDefault { mutableSetOf() }
-    private val roomsLevelMap = mutableMapOf<Float, MutableSet<Room>>().withDefault { mutableSetOf() }
+    private val roomsLevelMap = mutableMapOf<Float, MutableSet<WayOwner>>().withDefault { mutableSetOf() }
 
     /**
      * Converts a given [Iterable] of [Building]s. This includes the merge of the [Room]s as well as the
@@ -59,6 +59,14 @@ object Converter {
             for (level in room.levels) {
                 val tmp = roomsLevelMap.getValue(level)
                 tmp.add(room)
+                roomsLevelMap[level] = tmp
+            }
+        }
+
+        for (connection in building.connections) {
+            for (level in connection.levels) {
+                val tmp = roomsLevelMap.getValue(level)
+                tmp.add(connection)
                 roomsLevelMap[level] = tmp
             }
         }
@@ -144,7 +152,7 @@ object Converter {
     private fun nodesToMerge(level: Float): MutableSet<MutableSet<IndoorObject>> {
         val nodesToMerge = mutableSetOf<MutableSet<IndoorObject>>()
         val nodesOnLevel = nodesLevelMap.getValue(level)
-        val nodesRoomMap = mutableMapOf<IndoorObject, MutableSet<Room>>().withDefault { mutableSetOf() }
+        val nodesRoomMap = mutableMapOf<IndoorObject, MutableSet<WayOwner>>().withDefault { mutableSetOf() }
         for (room in roomsLevelMap.getValue(level)) {
             room.nodes.map { nodesRoomMap.getValue(it).add(room) }
         }
