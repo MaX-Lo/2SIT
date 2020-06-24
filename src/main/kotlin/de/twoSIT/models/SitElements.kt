@@ -3,6 +3,10 @@ package de.twoSIT.models
 import Coordinate
 import com.google.gson.Gson
 import de.twoSIT.Mapper
+import de.twoSIT.const.LEVEL_CONNECTION_NODE_PROXY_THRESHOLD
+import de.twoSIT.const.LEVEL_CONN_TAGS_TO_REMOVE
+import de.twoSIT.const.NODE_PROXY_THRESHOLD
+import de.twoSIT.const.SIMPLE_NODE_BLACKLIST
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
 import kotlin.math.abs
@@ -107,14 +111,27 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val nodes: Muta
     }
 
     fun isDuplicate(other: LevelConnection): Boolean {
+        fun simpleNodes(nodes: MutableList<IndoorObject>): MutableList<IndoorObject> {
+            val resultList = mutableListOf<IndoorObject>()
+            for (node in nodes) {
+                for (tag in node.additionalTags) {
+                    if (tag.key !in SIMPLE_NODE_BLACKLIST) {
+                        resultList.add(node)
+                    }
+                }
+            }
+            return resultList
+        }
+
         if (levels.toSet() != other.levels.toSet()) {
             return false
         }
 
-        for (node in nodes) {
+        for (node in simpleNodes(nodes)) {
             var foundProxy = false
-            for (otherNode in other.nodes) {
-                if (node.inProximity(otherNode, 0.6)) { // displacement over multiple levels is higher than default threshold
+            for (otherNode in simpleNodes(other.nodes)) {
+                // displacement over multiple levels is higher than default threshold
+                if (node.inProximity(otherNode, LEVEL_CONNECTION_NODE_PROXY_THRESHOLD)) {
                     foundProxy = true
                     break
                 }
@@ -126,10 +143,41 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val nodes: Muta
         return true
     }
 
-    fun merge(other: LevelConnection) {
+    fun merge(other: LevelConnection): LevelConnection {
         // ToDo try to merge tags existing in both level connections
         // ToDo add doors and window nodes if existing
-        additionalTags.putAll(other.additionalTags)
+
+        // merge nodes
+        val mergedNodes = mutableListOf<IndoorObject>()
+        for (node in nodes) {
+            for (otherNode in other.nodes) {
+                mergedNodes.add(node.getMerged(otherNode))
+            }
+        }
+
+        // merge tags
+        val mergedTags = mutableMapOf<String, String>()
+        mergedTags.putAll(additionalTags)
+        mergedTags.putAll(other.additionalTags)
+        if ((additionalTags.containsKey("height") && !other.additionalTags.containsKey("height")) ||
+                !additionalTags.containsKey("height") && other.additionalTags.containsKey("height")) {
+            mergedTags["est_height"] = mergedTags.remove("height")!!
+        }
+
+        // merge levels
+        val mergedLevels = levels
+        mergedLevels.addAll(other.levels)
+
+        if (levelConnectionType != other.levelConnectionType) {
+            logger.warn("Merging LevelConnections with different LevelConnectionTypes: " +
+                    "'$levelConnectionType':'${other.levelConnectionType}'. Going with '$levelConnectionType'")
+        }
+        if (indoorTag != other.indoorTag){
+            logger.warn("Merging LevelConnections with different IndoorTags: " +
+                    "'$indoorTag':'${other.indoorTag}'. Going with '$indoorTag'")
+        }
+
+        return LevelConnection("-1", mergedLevels, mergedNodes, indoorTag, levelConnectionType, mergedTags)
     }
 
     override fun toOsm(): Way {
@@ -315,9 +363,6 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
         AbstractSitElement(id, additionalTags) {
 
     companion object {
-        // FixMe is it task of a node to take care what is in proximity? Each node could have a different threshold?
-        private const val proximityThreshold = 0.4 // meters
-
         fun fromRaw(element: RawNode, levels: MutableSet<Float>): IndoorObject? {
             return fromOsm(Node.fromRaw(element), levels)
         }
@@ -328,7 +373,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
             return IndoorObject(element.id, element.latitude, element.longitude, levels, element.additionalTags)
         }
 
-        fun getMerged(others: Iterable<IndoorObject>): IndoorObject {
+        fun getMerged(others: Iterable<IndoorObject>, threshold: Float = NODE_PROXY_THRESHOLD): IndoorObject {
             val othersAsList = others.toList()
 
             // FixMe othersAsList is sometimes of size 0 but at least one node should be in each set of to be merged nodes
@@ -342,7 +387,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
 
                 for (j in i + 1 until othersAsList.size) {
                     val node2 = othersAsList[j]
-                    if (node1.distanceTo(node2) > IndoorObject.proximityThreshold * 1.5) {
+                    if (node1.distanceTo(node2) > threshold * 1.5) {
                         logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity! Distance: ${node1.distanceTo(node2)}")
                     }
                 }
@@ -376,7 +421,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, val 
         return getMerged(setOf(this, other))
     }
 
-    fun inProximity(other: IndoorObject, threshold: Double = proximityThreshold): Boolean {
+    fun inProximity(other: IndoorObject, threshold: Float = NODE_PROXY_THRESHOLD): Boolean {
         return distanceTo(other) < threshold
     }
 
