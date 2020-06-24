@@ -176,29 +176,48 @@ object Mapper {
         for (relation in buildingRelations) {
             val building = Building.fromOsm(relation, allNodes, allWays)
 
-            if (building != null) {
-                for (member in relation.relationMembers) {
-                    parseFloor(allRelations[member.ref]!!, building)
+            if (building == null) {
+                unparsedBuildings.add(relation)
+                continue
+            }
+
+            for (member in relation.relationMembers) {
+                parseFloor(allRelations[member.ref]!!, building)
+            }
+
+            // make sure that we have a individual levelConnnection object on for each floor/level it connects
+            // so that we have a clean horizontal merge in the first step
+            val newConnections = mutableListOf<LevelConnection>()
+            // first add connections that are directly referenced by a floor
+            for (connection in building.connections) {
+                for (referencedLevel in connection.levelReferences) {
+                    val newNodes = connection.nodes.filter { referencedLevel in it.levels }
+                    newNodes.map { it.levels = mutableSetOf(referencedLevel) }
+                    val newLevelConn = LevelConnection(connection.id, mutableSetOf(referencedLevel), connection.levelReferences, connection.nodes, connection.indoorTag, connection.levelConnectionType, connection.additionalTags)
+                    newConnections.add(newLevelConn)
                 }
+            }
 
-                // remove LevelConnections that are duplicates of each other on each level
-                val toRemoveConnections = mutableListOf<LevelConnection>()
-                for (levelConnection1 in building.connections) {
-                    for (levelConnection2 in building.connections) {
-                        if (levelConnection1 === levelConnection2 || levelConnection1 in toRemoveConnections) {
-                            continue
-                        }
-
-                        if (levelConnection1.isDuplicate(levelConnection2)) {
-                            levelConnection1.merge(levelConnection2)
-                            toRemoveConnections.add(levelConnection2)
+            // in the second go check if some levels specified in verticalpassage:floorange dont have a connection in
+            // newConnections yet, if so create one
+            for (connection in building.connections) {
+                levelAdd@ for (level in connection.levels) {
+                    for (otherConnection in newConnections) {
+                        if (otherConnection.levels == mutableSetOf(level) && connection.overlays(otherConnection)) {
+                            continue@levelAdd
                         }
                     }
-                }
-                building.connections.removeAll(toRemoveConnections)
+                    val newNodes = connection.nodes.filter { level in it.levels }
+                    newNodes.map { it.levels = mutableSetOf(level) }
 
-                buildings.add(building)
-            } else unparsedBuildings.add(relation)
+                    val newLevelConn = LevelConnection(connection.id, mutableSetOf(level), connection.levelReferences, connection.nodes, connection.indoorTag, connection.levelConnectionType, connection.additionalTags)
+                    newConnections.add(newLevelConn)
+                }
+            }
+            building.connections.clear()
+            building.connections.addAll(newConnections)
+
+            buildings.add(building)
         }
 
     }
@@ -255,8 +274,8 @@ object Mapper {
      * @param way the [Way] that represents the level connection
      * @param building the [Building] to add the [LevelConnection] to
      */
-    private fun parseLevelConnections(way: Way, building: Building) {
-        val levelConnection = LevelConnection.fromOsm(way, allNodes) ?: return
+    private fun parseLevelConnections(way: Way, building: Building, level: MutableSet<Float>) {
+        val levelConnection = LevelConnection.fromOsm(way, allNodes, level) ?: return
         building.connections.add(levelConnection)
     }
 
@@ -270,7 +289,7 @@ object Mapper {
     private fun parseRoom(way: Way, level: MutableSet<Float>, building: Building) {
         for ((key, value) in way.additionalTags.entries) {
             if (key == "buildingpart" && value == "verticalpassage") {
-                parseLevelConnections(way, building)
+                parseLevelConnections(way, building, level)
                 return
             }
         }

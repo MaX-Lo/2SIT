@@ -4,14 +4,11 @@ import Coordinate
 import com.google.gson.Gson
 import de.twoSIT.Mapper
 import de.twoSIT.const.LEVEL_CONNECTION_NODE_PROXY_THRESHOLD
-import de.twoSIT.const.LEVEL_CONN_TAGS_TO_REMOVE
 import de.twoSIT.const.NODE_PROXY_THRESHOLD
 import de.twoSIT.const.SIMPLE_NODE_BLACKLIST
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
-import kotlin.math.abs
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 
 private val logger = getLogger("SitElements")
@@ -55,15 +52,15 @@ interface WayOwner {
     val nodes: MutableList<IndoorObject>
 }
 
-class LevelConnection(id: String, val levels: MutableSet<Float>, override val nodes: MutableList<IndoorObject>,
+class LevelConnection(id: String, val levels: MutableSet<Float>, val levelReferences: MutableSet<Float>, override val nodes: MutableList<IndoorObject>,
                       val indoorTag: IndoorTag, val levelConnectionType: LevelConnectionType,
                       additionalTags: MutableMap<String, String>) : AbstractSitElement(id, additionalTags), WayOwner {
     companion object {
-        fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>): LevelConnection? {
-            return fromOsm(Way.fromRaw(element), allNodes)
+        fun fromRaw(element: RawWay, allNodes: MutableMap<String, Node>, levelReference: MutableSet<Float>): LevelConnection? {
+            return fromOsm(Way.fromRaw(element), allNodes, levelReference)
         }
 
-        fun fromOsm(element: Way, allNodes: MutableMap<String, Node>): LevelConnection? {
+        fun fromOsm(element: Way, allNodes: MutableMap<String, Node>, levelReference: MutableSet<Float>): LevelConnection? {
             if (element.additionalTags.containsKey("buildingpart")) element.additionalTags.remove("buildingpart")
 
             if (!element.additionalTags.containsKey("buildingpart:verticalpassage")) {
@@ -109,25 +106,29 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, override val no
             else
                 IndoorTag.ROOM
 
-            return LevelConnection(element.id, levels, nodes, indoorTag, connectionType, element.additionalTags)
+            return LevelConnection(element.id, levels, levelReference, nodes, indoorTag, connectionType, element.additionalTags)
         }
     }
 
-    fun isDuplicate(other: LevelConnection): Boolean {
+    override fun equals(other: Any?): Boolean {
+        if (other is LevelConnection){
+            return other.id == id && other.levels == levels
+        }
+        return super.equals(other)
+    }
+
+    fun overlays(other: LevelConnection): Boolean {
         fun simpleNodes(nodes: MutableList<IndoorObject>): MutableList<IndoorObject> {
             val resultList = mutableListOf<IndoorObject>()
             for (node in nodes) {
                 for (tag in node.additionalTags) {
                     if (tag.key !in SIMPLE_NODE_BLACKLIST) {
+
                         resultList.add(node)
                     }
                 }
             }
             return resultList
-        }
-
-        if (levels.toSet() != other.levels.toSet()) {
-            return false
         }
 
         for (node in simpleNodes(nodes)) {
@@ -152,9 +153,12 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, override val no
 
         // merge nodes
         val mergedNodes = mutableListOf<IndoorObject>()
-        for (node in nodes) {
+        outer@for (node in nodes) {
             for (otherNode in other.nodes) {
-                mergedNodes.add(node.getMerged(otherNode))
+                if (node.inProximity(otherNode, LEVEL_CONNECTION_NODE_PROXY_THRESHOLD)) {
+                    mergedNodes.add(node.getMerged(otherNode))
+                    continue@outer
+                }
             }
         }
 
@@ -168,8 +172,10 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, override val no
         }
 
         // merge levels
-        val mergedLevels = levels
+        val mergedLevels = mutableSetOf<Float>()
+        mergedLevels.addAll(levels)
         mergedLevels.addAll(other.levels)
+
 
         if (levelConnectionType != other.levelConnectionType) {
             logger.warn("Merging LevelConnections with different LevelConnectionTypes: " +
@@ -180,7 +186,11 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, override val no
                     "'$indoorTag':'${other.indoorTag}'. Going with '$indoorTag'")
         }
 
-        return LevelConnection("-1", mergedLevels, mergedNodes, indoorTag, levelConnectionType, mergedTags)
+        val mergedLevelReference = mutableSetOf<Float>()
+        mergedLevelReference.addAll(levelReferences)
+        mergedLevelReference.addAll(other.levelReferences)
+
+        return LevelConnection("-1", mergedLevels, mergedLevelReference, mergedNodes, indoorTag, levelConnectionType, mergedTags)
     }
 
     override fun toOsm(): Way {
@@ -362,7 +372,7 @@ class Floor(id: String, val level: Float, additionalTags: MutableMap<String, Str
     }
 }
 
-class IndoorObject(id: String, val latitude: Double, val longitude: Double, val levels: MutableSet<Float>, additionalTags: MutableMap<String, String>) :
+class IndoorObject(id: String, val latitude: Double, val longitude: Double, var levels: MutableSet<Float>, additionalTags: MutableMap<String, String>) :
         AbstractSitElement(id, additionalTags) {
 
     companion object {
