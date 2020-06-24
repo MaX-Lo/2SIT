@@ -11,8 +11,8 @@ class NodeTest {
         val node1 = IndoorObject("1", 10.020134, 10.2356, mutableSetOf(1f), mutableMapOf())
         val node2 = IndoorObject("2", 10.020134, 10.2356, mutableSetOf(1f), mutableMapOf())
 
-        assertTrue { node1.distanceTo(node2) == 0.0 }
-        assertTrue { node2.distanceTo(node1) == 0.0 }
+        assertTrue { node1.distanceTo(node2) == 0.0f }
+        assertTrue { node2.distanceTo(node1) == 0.0f }
     }
 
     @Test

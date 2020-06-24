@@ -76,6 +76,51 @@ object Converter {
             logger.debug("Start to convert level '${level}' of building ${building.id}")
             convertLevel(level)
         }
+
+        val connectionsToMerge = verticalConnectionsToMerge(building)
+        building.connections.clear()
+        building.connections.addAll(mergeConnections(connectionsToMerge))
+    }
+
+    private fun mergeConnections(connectionsToMerge: MutableSet<MutableSet<LevelConnection>>): MutableSet<LevelConnection> {
+        val newConnections = mutableSetOf<LevelConnection>()
+        connectionsToMerge.map { newConnections.add(LevelConnection.getMerged(it)) }
+        return newConnections
+    }
+
+    private fun verticalConnectionsToMerge(building: Building): MutableSet<MutableSet<LevelConnection>> {
+        val connectionsToMerge = mutableSetOf<MutableSet<LevelConnection>>()
+
+        for (connection in building.connections) {
+            val connectionsNearby = building.connections.filter { connection.overlays(it) }
+
+            // if a overlaying connection is already processed and has therefore already a set in nodesToMerge the sets
+            // need to be merged
+            val setsOfOverlayingConnections = mutableSetOf<MutableSet<LevelConnection>>()
+            val connectionsNotListedYet = mutableSetOf<LevelConnection>()
+            for (connectionNearby in connectionsNearby) {
+                var setFound = false
+                for (s in connectionsToMerge) {
+                    if (connectionNearby in s) {
+                        setsOfOverlayingConnections.add(s)
+                        setFound = true
+                        break
+                    }
+                }
+                if (!setFound) {
+                    connectionsNotListedYet.add(connectionNearby)
+                }
+            }
+            for (s in setsOfOverlayingConnections) {
+                connectionsToMerge.remove(s)
+            }
+            val unitedSet = mutableSetOf<LevelConnection>()
+            setsOfOverlayingConnections.add(connectionsNotListedYet)
+            setsOfOverlayingConnections.map { unitedSet.addAll(it) }
+            unitedSet.add(connection)
+            connectionsToMerge.add(unitedSet)
+        }
+        return connectionsToMerge
     }
 
     private fun convertLevel(level: Float) {
