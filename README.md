@@ -1,3 +1,5 @@
+https://stackoverflow.com/questions/44265547/how-to-properly-specify-jcenter-repository-in-maven-config
+
 ## Merging Level Connections
 
 indoorOSM:
