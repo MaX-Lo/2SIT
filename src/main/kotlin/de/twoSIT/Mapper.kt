@@ -355,12 +355,15 @@ object Mapper {
             val originalRelationIds = building.originalRelations.map { it.id }.toSet()
 
             for (node in nodes) {
+                node.updateCommonTags()
                 if (node.id !in originalNodeIds) create.nodes.add(node.toRaw())
             }
             for (way in ways) {
+                way.updateCommonTags()
                 if (way.id !in originalWayIds) create.ways.add(way.toRaw())
             }
             for (relation in relations) {
+                relation.updateCommonTags()
                 if (relation.id !in originalRelationIds) create.relations.add(relation.toRaw())
             }
             osmChange.create = create
@@ -388,17 +391,24 @@ object Mapper {
             // currently we assume everything inside a building that's not created or deleted was modified
             // ToDo for commiting a new changeset metadata as changeset, version, ... needs to be updated
             for (node in nodes) {
-                if (node.id in originalNodeIds) modify.nodes.add(node.toRaw())
+                if (node.id in originalNodeIds) {
+                    node.updateCommonTags()
+                    modify.nodes.add(node.toRaw())
+                }
             }
             for (way in ways) {
-                if (way.id in originalWayIds) modify.ways.add(way.toRaw())
+                if (way.id in originalWayIds) {
+                    way.updateCommonTags()
+                    modify.ways.add(way.toRaw())
+                }
             }
             for (relation in relations) {
-                if (relation.id in originalRelationIds) modify.relations.add(relation.toRaw())
+                if (relation.id in originalRelationIds) {
+                    relation.updateCommonTags()
+                    modify.relations.add(relation.toRaw())
+                }
             }
             osmChange.modify = modify
-            //osmChange.create.ways.addAll(modify.ways)
-            //osmChange.create.nodes.addAll(modify.nodes)
             logger.info("\t${modify.nodes.size} nodes, ${modify.ways.size} ways, ${modify.relations.size} relations that got modified")
         }
 

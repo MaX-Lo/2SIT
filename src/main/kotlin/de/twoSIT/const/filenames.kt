@@ -1,7 +1,10 @@
 package de.twoSIT.const
 
 import de.twoSIT.models.Area
+import java.io.File
 import java.time.LocalDateTime
+
+val configFile = File("config.json")
 
 const val responseCacheDir = "response_cache"
 const val exportDir = "export"

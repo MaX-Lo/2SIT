@@ -5,6 +5,9 @@ import GeoDistance
 import com.google.gson.Gson
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 private val logger = getLogger("OsmElement")
 
@@ -33,6 +36,17 @@ abstract class AbstractOsmElement(val id: String, val additionalTags: MutableMap
         fun fromRaw(element: RawAbstractElement): AbstractOsmElement {
             throw NotImplementedError()
         }
+    }
+
+    fun updateCommonTags() {
+        additionalTags["generated"] = "true"
+        additionalTags["user"] = Config.username
+        additionalTags["changeset"] = Config.changesetId
+        additionalTags["uid"] = Config.userId
+        additionalTags["timestamp"] = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneOffset.UTC)
+                .format(Instant.now()).replace(" ", "T") + "Z"
     }
 
     abstract fun toRaw(): RawAbstractElement
