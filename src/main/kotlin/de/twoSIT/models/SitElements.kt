@@ -123,90 +123,6 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val levelRefere
 
             return LevelConnection(element.id, levels, levelReference, nodes, indoorTag, connectionType, element.additionalTags)
         }
-
-        fun getMerged(connectionsToMerge: MutableSet<LevelConnection>): LevelConnection {
-
-            // new nodes in the correct order
-            val newNodes = mutableListOf<IndoorObject>()
-            // a list of nodes that have been merged into a new node
-            val oldNodes = mutableListOf<IndoorObject>()
-            // find connection with maximum number of simple nodes - not the solution but hopefully better results
-            val baseConnection = connectionsToMerge.maxBy { it.simpleNodes.size }
-            for (node in baseConnection!!.simpleNodes) {
-                val nodesNearby = mutableSetOf<IndoorObject>()
-                for (connection in connectionsToMerge) {
-                    for (otherNode in connection.simpleNodes) {
-                        if (node.inProximity(otherNode, LEVEL_CONNECTION_NODE_PROXY_THRESHOLD)) {
-                            nodesNearby.add(otherNode)
-                        }
-                    }
-                }
-                val resultingNode = IndoorObject.getMerged(nodesNearby)
-                oldNodes.addAll(nodesNearby)
-                newNodes.add(resultingNode)
-            }
-
-            // go over all level connections and nodes, if nodes are found that aren't part of the new way
-            // project it onto all wall sections of the new way and choose the closest match -> insert projected
-            // point there
-            for (conn in connectionsToMerge) {
-                for (node in conn.nodes) {
-                    if (node in oldNodes) {
-                        continue
-                    }
-
-                    var closestWallSection: WallSection? = null
-                    var projectedPoint: IndoorObject? = null
-                    var closestDistance: Float = Float.MAX_VALUE
-                    for (wallStartInd in 0 until newNodes.size - 1) {
-                        val section = WallSection(newNodes[wallStartInd], newNodes[wallStartInd + 1])
-                        val intersection = section.getIntersection(node) ?: continue
-                        if (node.distanceTo(intersection.first) < closestDistance) {
-                            closestWallSection = section
-                            projectedPoint = intersection.first
-                            closestDistance = node.distanceTo(intersection.first)
-                        }
-                    }
-                    if (closestDistance < Float.MAX_VALUE) {
-                        newNodes.add(newNodes.indexOf(closestWallSection!!.start), projectedPoint!!)
-                    }
-                }
-            }
-
-            // merge tags
-            val mergedTags = mutableMapOf<String, String>()
-            var heightEst = false
-            for (conn in connectionsToMerge) {
-                if (!conn.additionalTags.containsKey("height")) heightEst = true
-                mergedTags.putAll(conn.additionalTags)
-            }
-            if (heightEst && mergedTags.containsKey("height")) {
-                mergedTags["est_height"] = mergedTags.remove("height")!!
-            }
-
-            // mergelevels
-            val mergedLevels = mutableSetOf<Float>()
-            connectionsToMerge.map { mergedLevels.addAll(it.levels) }
-
-            var consentType: LevelConnectionType? = null
-            var consentTag: IndoorTag? = null
-            for (conn in connectionsToMerge) {
-                if (consentType == null) {
-                    consentType = conn.levelConnectionType
-                } else if (conn.levelConnectionType != consentType) {
-                    logger.warn("Merging LevelConnections with different LevelConnectionTypes: " +
-                            "'${conn.levelConnectionType}':'${consentType}'. Going with '$consentType'")
-                }
-
-                if (consentTag == null) {
-                    consentTag = conn.indoorTag
-                } else if (conn.indoorTag != consentTag) {
-                    logger.warn("Merging LevelConnections with different IndoorTags: " +
-                            "'$consentTag':'${conn.indoorTag}'. Going with '$consentTag'")
-                }
-            }
-            return LevelConnection(IdGenerator.getNewId(), mergedLevels, mutableSetOf(), newNodes, consentTag!!, consentType!!, mergedTags)
-        }
     }
 
     fun overlays(other: LevelConnection): Boolean {
@@ -224,10 +140,6 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val levelRefere
             }
         }
         return true
-    }
-
-    fun merge(other: LevelConnection): LevelConnection {
-        return LevelConnection.getMerged(mutableSetOf(this, other))
     }
 
     override fun toOsm(): Way {

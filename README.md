@@ -48,3 +48,11 @@ Level Connections Vorverarbeitet werden.
     Floor Relation bereits eine VerticalPassage gibt, welche für die "einfachen" Nodes ein positives "inProximity" 
     Ergebnis erziehlt
   - ist das nicht der Fall wird die momentane LevelConnection samt Nodes Du
+  
+  
+## Zurückschreiben von Nodes während des Connection Mergings
+- schauen welche alten Nodes durch einen neuen Node ersetzt werden
+  - durch alle Wege iterieren, die den alten Node referenziert haben und Referenz durch neuen Node ersetzen
+- bei projezierten Nodes (z.B. Türen) sollte entweder der ursprüngliche Node beibehalten und lediglich verschoben werden
+  oder bei Neuerstellung auch in den ursprünglichen Weg wieder eingefügt werden, das sich die Tür in beiden angrenzenden
+  Raumwegen wiederfinden muss

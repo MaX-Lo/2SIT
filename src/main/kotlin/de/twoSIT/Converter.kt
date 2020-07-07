@@ -1,6 +1,8 @@
 package de.twoSIT
 
+import de.twoSIT.const.LEVEL_CONNECTION_NODE_PROXY_THRESHOLD
 import de.twoSIT.models.*
+import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
 
 private val logger = getLogger(Converter::class.java)
@@ -84,9 +86,121 @@ object Converter {
 
     private fun mergeConnections(connectionsToMerge: MutableSet<MutableSet<LevelConnection>>): MutableSet<LevelConnection> {
         val newConnections = mutableSetOf<LevelConnection>()
-        connectionsToMerge.map { newConnections.add(LevelConnection.getMerged(it)) }
+        connectionsToMerge.map { newConnections.add(mergeLevelConnections(it)) }
         return newConnections
     }
+
+    /** replace all occurrences of each node in oldNodes by the newNode */
+    private fun updateNodeRefs(oldNodes: Set<IndoorObject>, newNode: IndoorObject) {
+        for ((level, rooms) in roomsLevelMap.entries) {
+            if (level !in newNode.levels) {
+                continue
+            }
+            for (room in rooms) {
+                if (room is LevelConnection) {
+                    continue
+                }
+                val toReplace = mutableListOf<IndoorObject>()
+                for (node in room.nodes) {
+                    if (node in oldNodes) {
+                        toReplace.add(node)
+                    }
+                }
+                for (node in toReplace) {
+                    room.nodes[room.nodes.indexOf(node)] = newNode
+                }
+            }
+        }
+    }
+
+    private fun mergeLevelConnections(connections: MutableSet<LevelConnection>): LevelConnection {
+
+        // new nodes in the correct order
+        val newNodes = mutableListOf<IndoorObject>()
+        // a list of nodes that have been merged into a new node
+        val oldNodes = mutableListOf<IndoorObject>()
+        // find connection with maximum number of simple nodes
+        val baseConnection = connections.maxBy { it.simpleNodes.size }
+        for (node in baseConnection!!.simpleNodes) {
+            val nodesNearby = mutableSetOf<IndoorObject>()
+            for (connection in connections) {
+                for (otherNode in connection.simpleNodes) {
+                    if (node.inProximity(otherNode, LEVEL_CONNECTION_NODE_PROXY_THRESHOLD)) {
+                        nodesNearby.add(otherNode)
+                    }
+                }
+            }
+            val resultingNode = IndoorObject.getMerged(nodesNearby)
+            oldNodes.addAll(nodesNearby)
+            newNodes.add(resultingNode)
+            updateNodeRefs(nodesNearby, resultingNode)
+        }
+        // last node should be the same as the first to generate a closed way, can be simply replaced since no nearby
+        // nodes can be found after search of nearby nodes and replacement of the first node in this way
+        newNodes[newNodes.size-1] = newNodes[0]
+
+        // go over all level connections and nodes, if nodes are found that aren't part of the new way
+        // project it onto all wall sections of the new way and choose the closest match -> insert projected
+        // point there
+        for (conn in connections) {
+            for (node in conn.nodes) {
+                if (node in oldNodes) {
+                    continue
+                }
+
+                var closestWallSection: WallSection? = null
+                var projectedPoint: IndoorObject? = null
+                var closestDistance: Float = Float.MAX_VALUE
+                for (wallStartInd in 0 until newNodes.size - 1) {
+                    val section = WallSection(newNodes[wallStartInd], newNodes[wallStartInd + 1])
+                    val intersection = section.getIntersection(node) ?: continue
+                    if (node.distanceTo(intersection.first) < closestDistance) {
+                        closestWallSection = section
+                        projectedPoint = intersection.first
+                        closestDistance = node.distanceTo(intersection.first)
+                    }
+                }
+                if (closestDistance < Float.MAX_VALUE) {
+                    newNodes.add(newNodes.indexOf(closestWallSection!!.start), projectedPoint!!)
+                }
+            }
+        }
+
+        // merge tags
+        val mergedTags = mutableMapOf<String, String>()
+        var heightEst = false
+        for (conn in connections) {
+            if (!conn.additionalTags.containsKey("height")) heightEst = true
+            mergedTags.putAll(conn.additionalTags)
+        }
+        if (heightEst && mergedTags.containsKey("height")) {
+            mergedTags["est_height"] = mergedTags.remove("height")!!
+        }
+
+        // mergelevels
+        val mergedLevels = mutableSetOf<Float>()
+        connections.map { mergedLevels.addAll(it.levels) }
+
+        var consentType: LevelConnectionType? = null
+        var consentTag: IndoorTag? = null
+        for (conn in connections) {
+            if (consentType == null) {
+                consentType = conn.levelConnectionType
+            } else if (conn.levelConnectionType != consentType) {
+                logger.warn("Merging LevelConnections with different LevelConnectionTypes: " +
+                        "'${conn.levelConnectionType}':'${consentType}'. Going with '$consentType'")
+            }
+
+            if (consentTag == null) {
+                consentTag = conn.indoorTag
+            } else if (conn.indoorTag != consentTag) {
+                logger.warn("Merging LevelConnections with different IndoorTags: " +
+                        "'$consentTag':'${conn.indoorTag}'. Going with '$consentTag'")
+            }
+        }
+        return LevelConnection(IdGenerator.getNewId(), mergedLevels, mutableSetOf(), newNodes, consentTag!!, consentType!!, mergedTags)
+    }
+
 
     private fun verticalConnectionsToMerge(building: Building): MutableSet<MutableSet<LevelConnection>> {
         val connectionsToMerge = mutableSetOf<MutableSet<LevelConnection>>()

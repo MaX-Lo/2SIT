@@ -94,7 +94,7 @@ class Requester private constructor(private val baseUrl: String) {
     }
 
     fun requestNodes(ids: Iterable<String>): String {
-        val idString = ids.joinToString(separator = ",") { it -> "$it" }
+        val idString = ids.joinToString(separator = ",") { it -> it }
         val url = "${baseUrl}nodes?nodes=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
@@ -129,7 +129,7 @@ class Requester private constructor(private val baseUrl: String) {
     }
 
     fun requestWays(ids: Iterable<String>): String {
-        val idString = ids.joinToString(separator = ",") { it -> "$it" }
+        val idString = ids.joinToString(separator = ",") { it -> it }
         val url = "${baseUrl}ways?ways=$idString"
         return Request.Get(url).execute().returnContent().asString()
     }
