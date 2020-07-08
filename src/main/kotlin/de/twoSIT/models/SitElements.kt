@@ -202,6 +202,7 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
                             "corridor" -> indoorTag = IndoorTag.CORRIDOR
                             "room" -> indoorTag = IndoorTag.ROOM
                             "hall" -> indoorTag = IndoorTag.AREA
+                            "shell" -> indoorTag = IndoorTag.AREA
                             else -> logger.info("Unrecognized IndoorTag '${value}' in Way ${element.id}")
                         }
                     }
@@ -493,6 +494,11 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
         val nodeMembers = indoorObjects.map { it.toOsm().toMember() }
         val wayMembers = rooms.map { it.toOsm().toMember() }.toMutableList()
         wayMembers.addAll(connections.map { it.toOsm().toMember() })
+        for (floor in floors) {
+            if (floor.shell != null) {
+                wayMembers.add(floor.shell!!.toOsm().toMember())
+            }
+        }
 
         val relationMembers = floors.map { it.toOsm().toMember() }
         relation.nodeMembers = nodeMembers.toMutableList()
@@ -512,6 +518,11 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
         containedWays.addAll(connections.map { it.toOsm() })
         connections.map { containedNodes.addAll(it.nodes.map { it.toOsm() }) }
         rooms.map { containedNodes.addAll(it.nodes.map { it.toOsm() }) }
+        for (floor in floors) {
+            if (floor.shell != null) {
+                containedWays.add(floor.shell!!.toOsm())
+            }
+        }
 
         val containedRelations = floors.map { it.toOsm() }
 
