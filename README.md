@@ -11,6 +11,9 @@ Maybe smaller corrections need to be done here.
 * If you checked the data for correctness the osc data can be committed directly to osm or be integrated with the data in
 your editor
 
+### Config.json
+Todo: add table explaining each parameter
+
 ## Compilation
 When executing maven compile one needs to add set the settings file explicitly.
 ```mvn -s settings.xml compile```

@@ -8,14 +8,16 @@ import kotlin.system.exitProcess
 
 private val logger = getLogger(Config::class.java)
 
-data class RawConfig(val areas: List<Area>, val username: String, val userId: String, val serverUrl: String, val changesetId: String)
+data class RawConfig(val areas: List<Area>, val username: String, val userId: String, val serverUrl: String, val changesetId: String, val maxWallWidthInM: Float, val maxLevelConnectionNodeOffsetInM: Float)
 
 object Config {
     var areas: List<Area>
     var username: String
-    var userId: String
     var serverUrl: String
     var changesetId: String
+    var userId: String
+    var maxWallWidthInM: Float
+    var maxLevelConnectionNodeOffsetInM: Float
 
     init {
         if (!configFile.exists()){
@@ -33,6 +35,8 @@ object Config {
             serverUrl = rawConfig.serverUrl
             changesetId = rawConfig.changesetId
             userId = rawConfig.userId
+            maxWallWidthInM = rawConfig.maxWallWidthInM
+            maxLevelConnectionNodeOffsetInM = rawConfig.maxLevelConnectionNodeOffsetInM
         } catch (e: KlaxonException){
             logger.error("${e::class.simpleName} occurred while parsing the config file ('${configFile.absolutePath}'):" +
                     "\n${e.stackTrace}")

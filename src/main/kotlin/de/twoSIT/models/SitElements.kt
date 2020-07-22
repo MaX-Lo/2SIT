@@ -298,7 +298,14 @@ class Floor(id: String, val level: Float, additionalTags: MutableMap<String, Str
                 if ("level:usage" in way.additionalTags.keys)
                     floor.usages[way.additionalTags["level:usage"]!!] = way
                 if (member.role == "shell") {
+                    allWays[member.ref]!!.additionalTags["buildingpart"] = "shell"
                     floor.shell = Room.fromOsm(allWays[member.ref]!!, mutableSetOf(level[0]), allNodes)
+                }
+            }
+
+            for (member in element.nodeMembers) {
+                if (member.role == "entrance") {
+                    allNodes[member.ref]!!.additionalTags["entrance"] = member.role
                 }
             }
 
@@ -336,31 +343,31 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, var 
             return IndoorObject(element.id, element.latitude, element.longitude, levels, element.additionalTags)
         }
 
-        fun getMerged(others: Iterable<IndoorObject>, threshold: Float = NODE_PROXY_THRESHOLD): IndoorObject {
-            val othersAsList = others.toList()
+        fun getMerged(indoorObjects: Iterable<IndoorObject>, threshold: Float = NODE_PROXY_THRESHOLD): IndoorObject {
+            val indoorObjectsAsList = indoorObjects.toList()
 
-            if (othersAsList.isEmpty()) {
+            if (indoorObjectsAsList.isEmpty()) {
                 logger.info("Can't merge list of size 0")
             }
-            for (i in 0 until othersAsList.size - 1) {
-                val node1 = othersAsList[i]
+            for (i in 0 until indoorObjectsAsList.size - 1) {
+                val node1 = indoorObjectsAsList[i]
 
-                for (j in i + 1 until othersAsList.size) {
-                    val node2 = othersAsList[j]
-                    if (node1.distanceTo(node2) > threshold * 1.5) {
+                for (j in i + 1 until indoorObjectsAsList.size) {
+                    val node2 = indoorObjectsAsList[j]
+                    if (node1.distanceTo(node2) > threshold * 3) {
                         logger.warn("merging nodes ${node1.id}, ${node2.id} that are not in proximity! Distance: ${node1.distanceTo(node2)}")
                     }
                 }
             }
             // ToDo tags contained in multiple nodes are overwritten - do we want that?
             val additionalTags = mutableMapOf<String, String>()
-            others.map { additionalTags.putAll(it.additionalTags) }
+            indoorObjects.map { additionalTags.putAll(it.additionalTags) }
 
-            val latitude = others.map { it.latitude }.average()
-            val longitude = others.map { it.longitude }.average()
+            val latitude = indoorObjects.map { it.latitude }.average()
+            val longitude = indoorObjects.map { it.longitude }.average()
 
             val levels = mutableSetOf<Float>()
-            others.map { levels.addAll(it.levels) }
+            indoorObjects.map { levels.addAll(it.levels) }
 
             return IndoorObject(IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
         }
@@ -400,7 +407,7 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, var 
 
 class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags: MutableMap<String, String>,
                val originalNodes: List<Node>, val originalWays: List<Way>, val originalRelations: List<Relation>,
-               val entrances: MutableList<IndoorObject>) :
+               val entrances: MutableMap<String, IndoorObject>) :
         AbstractSitElement(id, additionalTags) {
     var height: Float? = null
     var name: String? = null
@@ -452,12 +459,14 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
                 else logger.info("Multiple mainWays for building-relation ${element.id}")
             }
 
-            val entrances = mutableListOf<IndoorObject>()
+            val entrances = mutableMapOf<String, IndoorObject>()
             for (member in element.nodeMembers) {
                 if (member.role == "entrance") {
                     // todo this is a door
                     // fixme this is always level 0
-                    IndoorObject.fromOsm(allNodes[member.ref]!!, mutableSetOf(0f))?.let { entrances.add(it) }
+                    IndoorObject.fromOsm(allNodes[member.ref]!!, mutableSetOf(0f))?.let {
+                        entrances[member.ref] = it
+                    }
                 }
             }
 
@@ -512,7 +521,7 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
 
     fun getContainedElements(): Triple<List<Node>, List<Way>, List<Relation>> {
         val containedNodes = indoorObjects.map { it.toOsm() }.toMutableList()
-        containedNodes.addAll(entrances.map { it.toOsm() })
+        containedNodes.addAll(entrances.values.map { it.toOsm() })
 
         val containedWays = rooms.map { it.toOsm() }.toMutableList()
         containedWays.addAll(connections.map { it.toOsm() })

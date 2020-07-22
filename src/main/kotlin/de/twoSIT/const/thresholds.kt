@@ -1,6 +1,8 @@
 package de.twoSIT.const
 
-const val LEVEL_CONNECTION_NODE_PROXY_THRESHOLD = 0.6f
-const val NODE_PROXY_THRESHOLD = 0.4f
+import de.twoSIT.models.Config
+
+val LEVEL_CONNECTION_NODE_PROXY_THRESHOLD = Config.maxLevelConnectionNodeOffsetInM
+val NODE_PROXY_THRESHOLD = Config.maxWallWidthInM
 
 val SIMPLE_NODE_BLACKLIST = setOf<String>("window", "door")
