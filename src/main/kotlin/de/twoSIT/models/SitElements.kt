@@ -372,9 +372,14 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, var 
             val longitude = indoorObjects.map { it.longitude }.average()
 
             val levels = mutableSetOf<Float>()
-            indoorObjects.map { levels.addAll(it.levels) }
-
-            return IndoorObject(IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
+            var id: String? = null
+            for (indoorObj in indoorObjects){
+                levels.addAll(indoorObj.levels)
+                if (indoorObj.id[0] != '-'){
+                    id = indoorObj.id
+                }
+            }
+            return IndoorObject(id?: IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
         }
 
     }

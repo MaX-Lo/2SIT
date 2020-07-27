@@ -12,7 +12,28 @@ Maybe smaller corrections need to be done here.
 your editor
 
 ### Config.json
-Todo: add table explaining each parameter
+The config file consists out of the following values
+
+|Parameter| Explanation | Example |
+|--|--|--|
+| username | the username under which the changeset is authored | "username": "testUser" |
+| userId | the userId under which the changeset is authored |"userId": "123456987453"  |
+| serverUrl | The osm api endpoint to use | "serverUrl": "https://api.openstreetmap.org/api/0.6/" |
+| changesetId | the id given by the server for a changeset | "changesetId": "123456789" |
+| maxWallWidthInM | the wall thickness threshold for horizontal merging. How far apart can two lines max be to get merged | "maxWallWidthInM": 0.4 |
+| maxLevelConnectionNodeOffsetInM | the wall thickness threshold for vertical merging. | "maxLevelConnectionNodeOffsetInM": 0.6 |
+| areas | a list of areas to transform | "areas": [_area1_, _area2_] |
+
+An area is a pretty self explanatory JS object:
+`{  
+  "minLongitude": 49.41689,  
+  "maxLongitude": 49.41969,  
+  "minLatitude": 8.67180,  
+  "maxLatitude": 8.67695  
+}`
+
+
+The `maxWallWidthInM` defines the thickness a wall can have to be recognized as one in indoorOsm, whereas the `maxLevelConnectionNodeOffsetInM` is the threshold how big levelConnections can be slipped to count as above each other. 
 
 ## Compilation
 When executing maven compile one needs to add set the settings file explicitly.
