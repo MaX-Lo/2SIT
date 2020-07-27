@@ -320,7 +320,7 @@ object Converter {
             val nodesNearby = mutableSetOf<IndoorObject>()
             val rooms = nodesRoomMap.getValue(node)
             loop@ for (node1 in nodesOnLevel) {
-                if (node === node1) {
+                if (node === node1 || node.id == node1.id) {
                     continue
                 }
                 for (room in rooms) {

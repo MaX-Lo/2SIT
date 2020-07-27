@@ -26,3 +26,10 @@
       "minLatitude":  8.6739984,
       "maxLatitude":8.6743986
     }
+1+4:
+    {
+      "minLongitude": 49.4186475,
+      "maxLongitude": 49.419484,
+      "minLatitude":  8.6739677,
+      "maxLatitude": 8.6749542
+    }
