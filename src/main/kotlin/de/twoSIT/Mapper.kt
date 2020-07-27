@@ -346,7 +346,8 @@ object Mapper {
             val resultingOsmElements = building.getContainedElements()
             val nodes = resultingOsmElements.first
             val ways = resultingOsmElements.second
-            val relations = resultingOsmElements.third
+            val relations = resultingOsmElements.third.toMutableList()
+            relations.add(building.toOsm())
 
             // populate create elements
             val originalNodeIds = building.originalNodes.map { it.id }.toSet()
