@@ -34,16 +34,17 @@ private fun setupLogger(logger: Logger, file: String = defaultLogFile): Logger {
     ple.start()
 
     val consoleAppender = ConsoleAppender<ILoggingEvent>()
-    consoleAppender.setEncoder(ple)
+    consoleAppender.encoder = ple
     consoleAppender.context = lc
     consoleAppender.start()
     logger.addAppender(consoleAppender)
 
     val dirName = logDir
     File(dirName).mkdir()
+    //File("$dirName/$file").deleteOnExit()
     val fileAppender = FileAppender<ILoggingEvent>()
     fileAppender.file = "$dirName/$file"
-    fileAppender.setEncoder(ple)
+    fileAppender.encoder = ple
     fileAppender.context = lc
     fileAppender.start()
     logger.addAppender(fileAppender)

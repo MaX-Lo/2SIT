@@ -1,0 +1,7 @@
+1:
+    {
+      "minLongitude": 49.4186787,
+      "maxLongitude": 49.418906,
+      "minLatitude": 8.6745051,
+      "maxLatitude": 8.6748985
+    }

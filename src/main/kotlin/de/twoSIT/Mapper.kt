@@ -37,7 +37,9 @@ object Mapper {
         logger.debug("Parsed area into ${buildings.size} buildings with a total of " +
                 "${buildings.map { it.rooms }.size} ways/rooms; ${buildings.map { it.floors }.size} relations/floors and " +
                 "${buildings.map { it.indoorObjects.size + it.rooms.map { it.toOsm().nodeReferences.size }.sum() }.sum()} nodes")
-        logger.warn("Could not parse ${unparsedBuildings.size} buildings")
+        if (unparsedBuildings.size > 0) {
+            logger.warn("Could not parse ${unparsedBuildings.size} buildings")
+        }
         return buildings
     }
 
@@ -60,7 +62,7 @@ object Mapper {
             }
         }
         if (missingWays.isNotEmpty()) {
-            logger.info("Fetching ${missingWays.size} ways")
+            logger.debug("Fetching ${missingWays.size} ways")
             val wayList = RawWay.multipleFromString(requester.requestWays(missingWays))
             val missingNodes = mutableListOf<String>()
             for (rawWay in wayList) {

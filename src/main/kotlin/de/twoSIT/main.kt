@@ -19,6 +19,7 @@ const val uniServer = "http://141.76.16.34:8084/api/0.6/"
 const val officialServer = "https://api.openstreetmap.org/api/0.6/"
 
 fun main() {
+    logger.info("New run starts")
     val requester = Requester.getInstance(Config.serverUrl)
 
     val buildings = mutableSetOf<Building>()

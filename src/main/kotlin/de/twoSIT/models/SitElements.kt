@@ -212,8 +212,8 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
 
             // ToDo is this needed?
             if (indoorTag == null) {
-                logger.warn("Could not parse Way ${element.id} to room: No IndoorTag'")
-                return null
+                logger.warn("Could not parse Way ${element.id} to room: No IndoorTag'. Defaulting to corridor")
+                indoorTag = IndoorTag.CORRIDOR
             }
 
             val nodes = element.nodeReferences.map { allNodes[it.ref]!! }
@@ -226,6 +226,11 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
                 }
                 indoorObjects.add(obj)
             }
+            if (nodes[0].id != nodes[nodes.size-1].id){
+                logger.warn("Could not parse Way ${element.id} to room: Different beginning and end node'")
+                return null
+            }
+
             if (roomLevel.size == 0) {
                 roomLevel = floorLevel
             }
