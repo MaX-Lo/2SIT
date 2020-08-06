@@ -235,13 +235,36 @@ object Mapper {
     private fun parseFloor(relation: Relation, building: Building) {
         val floor = Floor.fromOsm(relation, allAreaNodes, allAreaWays) ?: return
 
+        // write indoorObj into building
         for (member in relation.nodeMembers) {
             parseIndoorObject(allAreaNodes[member.ref]!!, mutableSetOf(floor.level), building)
         }
 
+        // write rooms to building
         for (member in relation.wayMembers) {
             val way = allAreaWays[member.ref]!!
             parseRoom(way, mutableSetOf(floor.level), building)
+        }
+
+        // check for stand alone doors and windows to flag
+        for (indObj in building.indoorObjects){
+            var isStandalone = true
+            for (room in building.rooms.filter { floor.level in it.levels }){
+                if (indObj.id in room.nodes.map { it.id }){
+                    isStandalone = false
+                    break
+                }
+            }
+            if (isStandalone){
+                when {
+                    indObj.additionalTags.containsKey("door") -> {
+                        logger.warn("found standalone door: ${indObj.id}")
+                    }
+                    indObj.additionalTags.containsKey("window") -> {
+                        logger.warn("found standalone window: ${indObj.id}")
+                    }
+                }
+            }
         }
 
         for (member in relation.relationMembers) {
