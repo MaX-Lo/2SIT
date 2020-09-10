@@ -36,9 +36,12 @@ An area is a pretty self explanatory JS object:
 The `maxWallWidthInM` defines the thickness a wall can have to be recognized as one in indoorOsm, whereas the `maxLevelConnectionNodeOffsetInM` is the threshold how big levelConnections can be slipped to count as above each other. 
 
 ## Compilation
+### Development
 When executing maven compile one needs to add set the settings file explicitly.
 ```mvn -s settings.xml compile```
 
 See the following for details:
 https://stackoverflow.com/questions/44265547/how-to-properly-specify-jcenter-repository-in-maven-config
 
+## Execution
+There is a runnable standalone jar in `kp-transformation-von-indoor-karten/out/artifacts/2SIT_jar/2SIT.jar`. Standalone means you can copy it anywhere and it will run with `java -jar 2SIT.jar`, given there is a `config.json` in the same directory. 

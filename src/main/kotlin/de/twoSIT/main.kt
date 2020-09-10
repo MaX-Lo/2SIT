@@ -18,7 +18,8 @@ val sitArea = Area(42.79609, -1.63938, 42.80234, -1.63280)
 const val uniServer = "http://141.76.16.34:8084/api/0.6/"
 const val officialServer = "https://api.openstreetmap.org/api/0.6/"
 
-fun main() {
+
+fun main(args: Array<String>) {
     logger.info("New run starts")
     val requester = Requester.getInstance(Config.serverUrl)
 
