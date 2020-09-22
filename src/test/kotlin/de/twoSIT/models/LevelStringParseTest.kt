@@ -33,4 +33,11 @@ class LevelStringParseTest {
         assertEquals(mutableSetOf(1f, 3f, 4f), levelFromStr("1, 3 to 4"))
         assertEquals(mutableSetOf(1f, 3f, 4f), levelFromStr("1;3 to4"))
     }
+
+    @Test
+    fun testLevelToString() {
+        val levels = mutableSetOf(-1f, -2f, 1f, 1.5f, 4f, 6f, 7f, 7.5f, 8f)
+
+        assertEquals("-2--1;1-1.5;4;6-8", levelToStr(levels))
+    }
 }

@@ -8,6 +8,7 @@ import de.twoSIT.const.NODE_PROXY_THRESHOLD
 import de.twoSIT.const.SIMPLE_NODE_BLACKLIST
 import de.twoSIT.util.IdGenerator
 import de.twoSIT.util.getLogger
+import kotlin.math.abs
 import kotlin.math.pow
 
 
@@ -19,7 +20,14 @@ enum class LevelConnectionType {
 }
 
 enum class IndoorTag {
-    ROOM, AREA, WALL, CORRIDOR
+    ROOM, AREA, WALL, CORRIDOR, LEVEL
+}
+
+fun heightToString(height: Float): String {
+    if (height % 1 == 0f) {
+        return height.toInt().toString()
+    }
+    return height.toString()
 }
 
 fun levelFromStr(levelStr: String): MutableSet<Float> {
@@ -39,7 +47,29 @@ fun levelFromStr(levelStr: String): MutableSet<Float> {
 }
 
 fun levelToStr(level: MutableSet<Float>): String {
-    return level.toString().replace("[", "").replace("]", "").replace(",", ";").replace(".0", "")
+    val levels = level.toMutableList().sorted().toMutableList()
+
+    var currentRangeStart = levels.removeAt(0)
+    var resultString = ""
+    for ((levelInd, level_) in levels.withIndex()) {
+        val prevLevel = if (levelInd != 0) levels[levelInd - 1] else currentRangeStart
+        if (abs(prevLevel - level_) > 1) {
+            // new range
+            if (currentRangeStart == prevLevel) {
+                resultString += "${heightToString(currentRangeStart)};"
+            } else {
+                resultString += "${heightToString(currentRangeStart)}-${heightToString(prevLevel)};"
+            }
+            currentRangeStart = level_
+        }
+    }
+    if (levels.isEmpty() || currentRangeStart == levels.last()) {
+        resultString += "${heightToString(currentRangeStart)};"
+    } else {
+        resultString += "${heightToString(currentRangeStart)}-${heightToString(levels.last())};"
+    }
+    resultString = resultString.removeSuffix(";")
+    return resultString
 }
 
 abstract class AbstractSitElement(val id: String, val additionalTags: MutableMap<String, String>) {
@@ -158,6 +188,7 @@ class LevelConnection(id: String, val levels: MutableSet<Float>, val levelRefere
         when (indoorTag) {
             IndoorTag.ROOM -> tags["indoor"] = "room"
             IndoorTag.AREA -> tags["indoor"] = "area"
+            IndoorTag.LEVEL -> tags["indoor"] = "level"
         }
         tags["level"] = levelToStr(levels)
         val nodeRefs = nodes.map { it.toOsm().toNodeReference() }.toMutableList()
@@ -202,7 +233,7 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
                             "corridor" -> indoorTag = IndoorTag.CORRIDOR
                             "room" -> indoorTag = IndoorTag.ROOM
                             "hall" -> indoorTag = IndoorTag.AREA
-                            "shell" -> indoorTag = IndoorTag.AREA
+                            "shell" -> indoorTag = IndoorTag.LEVEL
                             else -> logger.info("Unrecognized IndoorTag '${value}' in Way ${element.id}")
                         }
                     }
@@ -226,7 +257,7 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
                 }
                 indoorObjects.add(obj)
             }
-            if (nodes[0].id != nodes[nodes.size-1].id){
+            if (nodes[0].id != nodes[nodes.size - 1].id) {
                 logger.warn("Could not parse Way ${element.id} to room: Different beginning and end node'")
                 return null
             }
@@ -246,8 +277,8 @@ class Room(id: String, val levels: MutableSet<Float>, val indoorTag: IndoorTag, 
     override fun toOsm(): Way {
         val way = Way(id, nodes.map { it.toOsm().toNodeReference() }.toMutableList(), additionalTags)
         way.additionalTags["level"] = levelToStr(levels)
-        way.additionalTags["indoorTag"] = indoorTag.toString().toLowerCase()
-        if (height != null) way.additionalTags["height"] = height.toString()
+        way.additionalTags["indoor"] = indoorTag.toString().toLowerCase()
+        if (height != null) way.additionalTags["height"] = heightToString(height!!)
         if (name != null) way.additionalTags["name"] = name!!
         if (ref != null) way.additionalTags["ref"] = ref!!
         return way
@@ -326,7 +357,7 @@ class Floor(id: String, val level: Float, additionalTags: MutableMap<String, Str
         val relation = Relation(id, additionalTags)
         relation.additionalTags["level"] = level.toString()
 
-        if (height != null) relation.additionalTags["height"] = height.toString()
+        if (height != null) relation.additionalTags["height"] = heightToString(height!!)
         if (ref != null) relation.additionalTags["ref"] = ref!!
         if (name != null) relation.additionalTags["name"] = name!!
 
@@ -373,13 +404,14 @@ class IndoorObject(id: String, val latitude: Double, val longitude: Double, var 
 
             val levels = mutableSetOf<Float>()
             var id: String? = null
-            for (indoorObj in indoorObjects){
+            for (indoorObj in indoorObjects) {
                 levels.addAll(indoorObj.levels)
-                if (indoorObj.id[0] != '-'){
+                if (indoorObj.id[0] != '-') {
                     id = indoorObj.id
                 }
             }
-            return IndoorObject(id?: IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
+            return IndoorObject(id
+                    ?: IdGenerator.getNewId(), latitude, longitude, levels.toMutableSet(), additionalTags)
         }
 
     }
@@ -507,7 +539,7 @@ class Building(id: String, val minLevel: Int, val maxLevel: Int, additionalTags:
         val relation = Relation(id, additionalTags)
         relation.additionalTags["minLevel"] = minLevel.toString()
         relation.additionalTags["maxLevel"] = maxLevel.toString()
-        if (height != null) relation.additionalTags["height"] = height.toString()
+        if (height != null) relation.additionalTags["height"] = heightToString(height!!)
         if (name != null) relation.additionalTags["name"] = name!!
 
         val nodeMembers = indoorObjects.map { it.toOsm().toMember() }
